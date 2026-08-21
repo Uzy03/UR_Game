@@ -1,0 +1,84 @@
+export interface Vector3Config {
+  readonly x: number;
+  readonly y: number;
+  readonly z: number;
+}
+
+export interface StageObstacleConfig {
+  readonly kind: 'table' | 'box';
+  readonly position: Vector3Config;
+  readonly size: Vector3Config;
+  readonly color: number;
+}
+
+export const GAME_CONFIG = {
+  loop: {
+    maxDeltaSeconds: 1 / 20,
+  },
+  renderer: {
+    maxPixelRatio: 2,
+    clearColor: 0xb9d9e8,
+  },
+  physics: {
+    gravity: { x: 0, y: -9.81, z: 0 },
+    characterOffset: 0.03,
+    groundProbeSpeed: 3,
+  },
+  player: {
+    spawn: { x: 0, y: 0.87, z: 4.1 },
+    speed: 4.4,
+    turnSharpness: 14,
+    collider: {
+      radius: 0.42,
+      halfHeight: 0.45,
+    },
+  },
+  camera: {
+    fov: 38,
+    near: 0.1,
+    far: 100,
+    offset: { x: 9.5, y: 12, z: 10.5 },
+    lookAtOffset: { x: 0, y: 0.55, z: 0 },
+    positionSharpness: 5.5,
+    lookAtSharpness: 8,
+  },
+  stage: {
+    width: 18,
+    depth: 14,
+    floorThickness: 0.4,
+    wallThickness: 0.55,
+    wallHeight: 1.65,
+    obstacles: [
+      {
+        kind: 'table',
+        position: { x: -3.6, y: 0.75, z: -1.5 },
+        size: { x: 3.4, y: 1.5, z: 1.5 },
+        color: 0xc98956,
+      },
+      {
+        kind: 'table',
+        position: { x: 3.5, y: 0.7, z: 2.0 },
+        size: { x: 2.7, y: 1.4, z: 1.2 },
+        color: 0x74a884,
+      },
+      {
+        kind: 'box',
+        position: { x: 2.7, y: 0.75, z: -2.9 },
+        size: { x: 1.5, y: 1.5, z: 1.5 },
+        color: 0xe3ae55,
+      },
+      {
+        kind: 'box',
+        position: { x: 0.25, y: 0.55, z: 0.6 },
+        size: { x: 1.1, y: 1.1, z: 1.1 },
+        color: 0xde7c68,
+      },
+      {
+        kind: 'box',
+        position: { x: -6.1, y: 0.45, z: 3.3 },
+        size: { x: 0.9, y: 0.9, z: 0.9 },
+        color: 0x7da7cf,
+      },
+    ] satisfies readonly StageObstacleConfig[],
+  },
+} as const;

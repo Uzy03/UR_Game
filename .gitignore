@@ -1,0 +1,33 @@
+# Dependencies and build output
+node_modules/
+dist/
+coverage/
+
+# Environment variables and machine-local configuration
+.env
+.env.*
+!.env.example
+*.local
+.npmrc
+.netrc
+
+# Credentials and private keys
+secrets/
+private/
+credentials*.json
+service-account*.json
+*.pem
+*.key
+*.p12
+*.pfx
+*.keystore
+
+# Logs and editor state
+*.log
+.vscode/
+.idea/
+.codex/
+.agents/
+
+# OS metadata
+.DS_Store
