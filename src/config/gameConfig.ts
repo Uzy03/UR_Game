@@ -1,3 +1,5 @@
+import type { PickableItemKind } from '../interaction/PickableItem';
+
 export interface Vector3Config {
   readonly x: number;
   readonly y: number;
@@ -9,6 +11,17 @@ export interface StageObstacleConfig {
   readonly position: Vector3Config;
   readonly size: Vector3Config;
   readonly color: number;
+}
+
+export interface StagePickableItemConfig {
+  readonly id: string;
+  readonly kind: PickableItemKind;
+  readonly position: Vector3Config;
+}
+
+export interface StagePlacePointConfig {
+  readonly id: string;
+  readonly position: Vector3Config;
 }
 
 export const GAME_CONFIG = {
@@ -41,6 +54,13 @@ export const GAME_CONFIG = {
     lookAtOffset: { x: 0, y: 0.55, z: 0 },
     positionSharpness: 5.5,
     lookAtSharpness: 8,
+  },
+  interaction: {
+    maxDistance: 1.65,
+    minForwardDot: 0.2,
+    facingPenalty: 0.85,
+    floorDropDistance: 0.9,
+    floorItemSpacing: 0.08,
   },
   stage: {
     width: 18,
@@ -80,5 +100,32 @@ export const GAME_CONFIG = {
         color: 0x7da7cf,
       },
     ] satisfies readonly StageObstacleConfig[],
+    items: [
+      {
+        id: 'tomato-1',
+        kind: 'tomato',
+        position: { x: 0, y: 0, z: 5.2 },
+      },
+      {
+        id: 'parcel-1',
+        kind: 'box',
+        position: { x: 1.55, y: 0, z: 2.55 },
+      },
+      {
+        id: 'plate-1',
+        kind: 'plate',
+        position: { x: -1.8, y: 0, z: 2.5 },
+      },
+    ] satisfies readonly StagePickableItemConfig[],
+    placePoints: [
+      {
+        id: 'wood-table-point',
+        position: { x: -3.6, y: 1.515, z: -1.5 },
+      },
+      {
+        id: 'green-counter-point',
+        position: { x: 3.5, y: 1.415, z: 2 },
+      },
+    ] satisfies readonly StagePlacePointConfig[],
   },
 } as const;

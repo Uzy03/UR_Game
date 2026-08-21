@@ -12,7 +12,8 @@ interface PlayerControllerOptions {
 const MOVEMENT_EPSILON_SQUARED = 0.0001;
 
 export class PlayerController {
-  public readonly object: Group = createPlayerModel();
+  public readonly object: Group;
+  public readonly carryAnchor: Group;
   private readonly desiredDisplacement = { x: 0, y: 0, z: 0 };
   private targetFacing = 0;
   private isMoving = false;
@@ -22,6 +23,9 @@ export class PlayerController {
     private readonly character: KinematicCharacter,
     private readonly options: PlayerControllerOptions,
   ) {
+    const model = createPlayerModel();
+    this.object = model.root;
+    this.carryAnchor = model.carryAnchor;
     character.copyPositionTo(this.object.position);
   }
 

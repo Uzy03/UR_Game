@@ -13,9 +13,12 @@ import { FollowCamera } from '../camera/FollowCamera';
 import { GAME_CONFIG } from '../config/gameConfig';
 import { InputManager } from '../input/InputManager';
 import { KeyboardInput } from '../input/KeyboardInput';
+import { CarrySystem } from '../interaction/CarrySystem';
+import { InteractionSystem } from '../interaction/InteractionSystem';
 import { PhysicsWorld } from '../physics/PhysicsWorld';
 import { PlayerController } from '../player/PlayerController';
 import { Stage } from '../stage/Stage';
+import { InteractionPrompt } from '../ui/InteractionPrompt';
 
 export class Game {
   private readonly scene = new Scene();
@@ -24,6 +27,7 @@ export class Game {
   private readonly input: InputManager;
   private readonly physics: PhysicsWorld;
   private readonly player: PlayerController;
+  private readonly interaction: InteractionSystem;
   private readonly followCamera: FollowCamera;
   private animationFrameId: number | null = null;
   private lastFrameTime = 0;
@@ -49,7 +53,7 @@ export class Game {
     );
 
     this.input = new InputManager([new KeyboardInput(window)]);
-    new Stage(this.scene, this.physics, GAME_CONFIG.stage);
+    const stage = new Stage(this.scene, this.physics, GAME_CONFIG.stage);
 
     const character = this.physics.createKinematicCharacter({
       position: GAME_CONFIG.player.spawn,
@@ -63,6 +67,30 @@ export class Game {
       groundProbeSpeed: GAME_CONFIG.physics.groundProbeSpeed,
     });
     this.scene.add(this.player.object);
+
+    const carry = new CarrySystem(
+      this.player.carryAnchor,
+      stage.object,
+      stage.pickableItems,
+      (position, item, allItems) => stage.isFloorDropPositionValid(
+        position,
+        item,
+        allItems,
+        GAME_CONFIG.interaction.floorItemSpacing,
+      ),
+    );
+    const promptElement = document.querySelector<HTMLElement>('#interaction-prompt');
+    if (promptElement === null) {
+      throw new Error('Interaction prompt #interaction-prompt was not found.');
+    }
+    this.interaction = new InteractionSystem(
+      this.input,
+      this.player.object,
+      carry,
+      [...stage.pickableItems, ...stage.placePoints],
+      new InteractionPrompt(promptElement),
+      GAME_CONFIG.interaction,
+    );
 
     this.followCamera = new FollowCamera(this.camera, this.player.object, {
       offset: new Vector3(
@@ -106,6 +134,7 @@ export class Game {
     }
 
     window.removeEventListener('resize', this.resize);
+    this.interaction.dispose();
     this.input.dispose();
     this.physics.dispose();
 
@@ -135,6 +164,7 @@ export class Game {
     this.player.updateBeforePhysics(deltaSeconds);
     this.physics.step(deltaSeconds);
     this.player.updateAfterPhysics(deltaSeconds);
+    this.interaction.update();
     this.followCamera.update(deltaSeconds);
     this.renderer.render(this.scene, this.camera);
 

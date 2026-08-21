@@ -6,7 +6,13 @@ import {
   MeshStandardMaterial,
   type Scene,
 } from 'three';
-import type { StageObstacleConfig } from '../config/gameConfig';
+import type {
+  StageObstacleConfig,
+  StagePickableItemConfig,
+  StagePlacePointConfig,
+} from '../config/gameConfig';
+import { PickableItem } from '../interaction/PickableItem';
+import { PlacePoint } from '../interaction/PlacePoint';
 import type { PhysicsWorld } from '../physics/PhysicsWorld';
 
 interface StageOptions {
@@ -16,6 +22,8 @@ interface StageOptions {
   readonly wallThickness: number;
   readonly wallHeight: number;
   readonly obstacles: readonly StageObstacleConfig[];
+  readonly items: readonly StagePickableItemConfig[];
+  readonly placePoints: readonly StagePlacePointConfig[];
 }
 
 const FLOOR_COLOR = 0xf1e8d7;
@@ -24,11 +32,13 @@ const TABLE_LEG_DARKEN = 0.15;
 
 export class Stage {
   public readonly object = new Group();
+  public readonly pickableItems: readonly PickableItem[];
+  public readonly placePoints: readonly PlacePoint[];
 
   public constructor(
     scene: Scene,
     physics: PhysicsWorld,
-    options: StageOptions,
+    private readonly options: StageOptions,
   ) {
     this.object.name = 'Stage';
     scene.add(this.object);
@@ -39,6 +49,61 @@ export class Stage {
     for (const obstacle of options.obstacles) {
       this.createObstacle(physics, obstacle);
     }
+
+    this.pickableItems = options.items.map((item) => new PickableItem({
+      id: item.id,
+      kind: item.kind,
+      position: item.position,
+      parent: this.object,
+    }));
+    this.placePoints = options.placePoints.map((placePoint) => new PlacePoint({
+      id: placePoint.id,
+      position: placePoint.position,
+      parent: this.object,
+    }));
+  }
+
+  public isFloorDropPositionValid(
+    position: { readonly x: number; readonly z: number },
+    item: PickableItem,
+    allItems: readonly PickableItem[],
+    spacing: number,
+  ): boolean {
+    const radius = item.footprintRadius;
+    if (
+      position.x - radius < -this.options.width / 2
+      || position.x + radius > this.options.width / 2
+      || position.z - radius < -this.options.depth / 2
+      || position.z + radius > this.options.depth / 2
+    ) {
+      return false;
+    }
+
+    for (const obstacle of this.options.obstacles) {
+      const overlapsX = Math.abs(position.x - obstacle.position.x) < obstacle.size.x / 2 + radius;
+      const overlapsZ = Math.abs(position.z - obstacle.position.z) < obstacle.size.z / 2 + radius;
+      if (overlapsX && overlapsZ) {
+        return false;
+      }
+    }
+
+    for (const otherItem of allItems) {
+      if (otherItem === item || !otherItem.isOnFloor()) {
+        continue;
+      }
+
+      const otherPosition = otherItem.object.position;
+      const minimumDistance = radius + otherItem.footprintRadius + spacing;
+      const distanceSquared = (
+        (position.x - otherPosition.x) ** 2
+        + (position.z - otherPosition.z) ** 2
+      );
+      if (distanceSquared < minimumDistance ** 2) {
+        return false;
+      }
+    }
+
+    return true;
   }
 
   private createFloor(physics: PhysicsWorld, options: StageOptions): void {
