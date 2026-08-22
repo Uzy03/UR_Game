@@ -37,4 +37,9 @@ export class KinematicCharacter {
     target.y = position.y;
     target.z = position.z;
   }
+
+  public resetPosition(position: ReadonlyVector3): void {
+    this.body.setTranslation(position, true);
+    this.body.setNextKinematicTranslation(position);
+  }
 }

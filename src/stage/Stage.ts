@@ -106,6 +106,16 @@ export class Stage {
     return true;
   }
 
+  public getPlacePoints(ids: readonly string[]): readonly PlacePoint[] {
+    return ids.map((id) => {
+      const placePoint = this.placePoints.find((candidate) => candidate.id === id);
+      if (placePoint === undefined) {
+        throw new Error(`PlacePoint "${id}" was not found in the stage.`);
+      }
+      return placePoint;
+    });
+  }
+
   private createFloor(physics: PhysicsWorld, options: StageOptions): void {
     const size = { x: options.width, y: options.floorThickness, z: options.depth };
     const position = { x: 0, y: -options.floorThickness / 2, z: 0 };

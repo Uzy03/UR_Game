@@ -11,14 +11,32 @@ import {
 } from 'three';
 import { FollowCamera } from '../camera/FollowCamera';
 import { GAME_CONFIG } from '../config/gameConfig';
+import { DialogueManager } from '../dialogue/DialogueManager';
 import { InputManager } from '../input/InputManager';
 import { KeyboardInput } from '../input/KeyboardInput';
 import { CarrySystem } from '../interaction/CarrySystem';
 import { InteractionSystem } from '../interaction/InteractionSystem';
+import { NPCController } from '../npc/NPCController';
 import { PhysicsWorld } from '../physics/PhysicsWorld';
 import { PlayerController } from '../player/PlayerController';
 import { Stage } from '../stage/Stage';
+import { CountdownTimer } from '../task/CountdownTimer';
+import { PlacementTask } from '../task/PlacementTask';
+import { TaskManager } from '../task/TaskManager';
+import { DialogueUI } from '../ui/DialogueUI';
 import { InteractionPrompt } from '../ui/InteractionPrompt';
+import { ResultOverlay } from '../ui/ResultOverlay';
+import { SpeechBubble } from '../ui/SpeechBubble';
+import { TaskHUD } from '../ui/TaskHUD';
+import { Phase2DemoController } from './Phase2DemoController';
+
+function requireElement(id: string): HTMLElement {
+  const element = document.querySelector<HTMLElement>(`#${id}`);
+  if (element === null) {
+    throw new Error(`Required UI element #${id} was not found.`);
+  }
+  return element;
+}
 
 export class Game {
   private readonly scene = new Scene();
@@ -27,7 +45,9 @@ export class Game {
   private readonly input: InputManager;
   private readonly physics: PhysicsWorld;
   private readonly player: PlayerController;
+  private readonly npc: NPCController;
   private readonly interaction: InteractionSystem;
+  private readonly phase2Demo: Phase2DemoController;
   private readonly followCamera: FollowCamera;
   private animationFrameId: number | null = null;
   private lastFrameTime = 0;
@@ -79,17 +99,59 @@ export class Game {
         GAME_CONFIG.interaction.floorItemSpacing,
       ),
     );
-    const promptElement = document.querySelector<HTMLElement>('#interaction-prompt');
-    if (promptElement === null) {
-      throw new Error('Interaction prompt #interaction-prompt was not found.');
-    }
     this.interaction = new InteractionSystem(
       this.input,
       this.player.object,
       carry,
       [...stage.pickableItems, ...stage.placePoints],
-      new InteractionPrompt(promptElement),
+      new InteractionPrompt(requireElement('interaction-prompt')),
       GAME_CONFIG.interaction,
+    );
+
+    this.npc = new NPCController({
+      id: GAME_CONFIG.npc.id,
+      displayName: GAME_CONFIG.npc.displayName,
+      position: GAME_CONFIG.npc.spawn,
+      moveSpeed: GAME_CONFIG.npc.moveSpeed,
+      turnSharpness: GAME_CONFIG.npc.turnSharpness,
+    });
+    this.scene.add(this.npc.object);
+    this.interaction.register(this.npc);
+
+    const taskManager = new TaskManager();
+    const placementTask = new PlacementTask(new CountdownTimer(), {
+      id: GAME_CONFIG.phase2.placementTask.id,
+      label: GAME_CONFIG.phase2.placementTask.label,
+      requiredItemIds: GAME_CONFIG.phase2.placementTask.requiredItemIds,
+      targetPlacePoints: stage.getPlacePoints(
+        GAME_CONFIG.phase2.placementTask.targetPlacePointIds,
+      ),
+      durationSeconds: GAME_CONFIG.phase2.taskDurationSeconds,
+    });
+    this.phase2Demo = new Phase2DemoController(
+      {
+        input: this.input,
+        player: this.player,
+        interaction: this.interaction,
+        carry,
+        items: stage.pickableItems,
+        placePoints: stage.placePoints,
+        npc: this.npc,
+        dialogue: new DialogueManager(new DialogueUI(requireElement('dialogue-window'))),
+        taskManager,
+        placementTask,
+        taskHud: new TaskHUD(requireElement('task-hud')),
+        resultOverlay: new ResultOverlay(requireElement('result-overlay')),
+        speechBubble: new SpeechBubble(requireElement('speech-bubble'), container),
+      },
+      {
+        introDialogue: GAME_CONFIG.phase2.introDialogue,
+        retryPlayerPosition: GAME_CONFIG.phase2.retryPlayerPosition,
+        retryPlayerFacing: GAME_CONFIG.phase2.retryPlayerFacing,
+        npcTaskPosition: GAME_CONFIG.npc.taskPosition,
+        successSpeech: GAME_CONFIG.phase2.successSpeech,
+        speechDurationSeconds: GAME_CONFIG.phase2.speechDurationSeconds,
+      },
     );
 
     this.followCamera = new FollowCamera(this.camera, this.player.object, {
@@ -134,6 +196,7 @@ export class Game {
     }
 
     window.removeEventListener('resize', this.resize);
+    this.phase2Demo.dispose();
     this.interaction.dispose();
     this.input.dispose();
     this.physics.dispose();
@@ -161,11 +224,14 @@ export class Game {
 
     // Controllers submit movement before the physics step; visuals only read the resolved pose afterward.
     this.input.update();
+    this.npc.update(deltaSeconds);
     this.player.updateBeforePhysics(deltaSeconds);
     this.physics.step(deltaSeconds);
     this.player.updateAfterPhysics(deltaSeconds);
     this.interaction.update();
+    this.phase2Demo.update(deltaSeconds);
     this.followCamera.update(deltaSeconds);
+    this.phase2Demo.updatePresentation(this.camera, deltaSeconds);
     this.renderer.render(this.scene, this.camera);
 
     this.animationFrameId = requestAnimationFrame(this.frame);

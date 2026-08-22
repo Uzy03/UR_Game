@@ -56,4 +56,9 @@ export class CarrySystem {
     item.placeOnFloor(this.worldRoot, position);
     return true;
   }
+
+  public reset(): void {
+    this.carriedItem?.reset();
+    this.carriedItem = null;
+  }
 }

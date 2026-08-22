@@ -20,23 +20,32 @@ export class InteractionSystem {
   private readonly playerForward = new Vector3();
   private readonly targetPosition = new Vector3();
   private readonly floorDropPosition = new Vector3();
+  private readonly interactables = new Set<Interactable>();
   private currentTarget: Interactable | null = null;
+  private enabled = true;
 
   public constructor(
     private readonly input: InputManager,
     private readonly player: Object3D,
     private readonly carry: CarrySystem,
-    private readonly interactables: readonly Interactable[],
+    interactables: readonly Interactable[],
     private readonly prompt: InteractionPrompt,
     private readonly options: InteractionSystemOptions,
   ) {
     this.context = { carry };
+    for (const interactable of interactables) {
+      this.interactables.add(interactable);
+    }
   }
 
   public update(): void {
+    if (!this.enabled) {
+      return;
+    }
+
     this.refreshTargetAndPrompt();
 
-    if (!this.input.wasActionPressed(InputAction.Interact)) {
+    if (!this.input.consumeActionPress(InputAction.Interact)) {
       return;
     }
 
@@ -46,13 +55,40 @@ export class InteractionSystem {
       this.carry.dropToFloor(this.floorDropPosition);
     }
 
-    this.refreshTargetAndPrompt();
+    if (this.enabled) {
+      this.refreshTargetAndPrompt();
+    }
+  }
+
+  public register(interactable: Interactable): void {
+    this.interactables.add(interactable);
+  }
+
+  public unregister(interactable: Interactable): void {
+    this.interactables.delete(interactable);
+    if (this.currentTarget === interactable) {
+      this.clearTargetAndPrompt();
+    }
+  }
+
+  public setEnabled(enabled: boolean): void {
+    if (enabled === this.enabled) {
+      return;
+    }
+
+    this.enabled = enabled;
+    if (!enabled) {
+      this.clearTargetAndPrompt();
+    }
+  }
+
+  public reset(): void {
+    this.clearTargetAndPrompt();
   }
 
   public dispose(): void {
-    this.currentTarget?.setHighlighted(false);
-    this.currentTarget = null;
-    this.prompt.setLabel(null);
+    this.clearTargetAndPrompt();
+    this.interactables.clear();
   }
 
   private refreshTargetAndPrompt(): void {
@@ -113,6 +149,12 @@ export class InteractionSystem {
     this.currentTarget?.setHighlighted(false);
     this.currentTarget = target;
     this.currentTarget?.setHighlighted(true);
+  }
+
+  private clearTargetAndPrompt(): void {
+    this.currentTarget?.setHighlighted(false);
+    this.currentTarget = null;
+    this.prompt.setLabel(null);
   }
 
   private getValidFloorDropPosition(): Vector3 | null {

@@ -34,10 +34,15 @@ export class PickableItem implements Interactable {
   public readonly object = new Group();
   public readonly footprintRadius: number;
   private readonly highlight: Mesh;
+  private readonly initialParent: Object3D;
+  private readonly initialPosition = new Vector3();
+  private readonly initialRotation = new Vector3();
   private state: PickableItemState = 'world';
 
   public constructor(options: PickableItemOptions) {
     this.id = options.id;
+    this.initialParent = options.parent;
+    this.initialPosition.copy(options.position);
     this.object.name = `PickableItem:${options.id}`;
     this.footprintRadius = ITEM_FOOTPRINT_RADIUS[options.kind];
     this.object.add(this.createVisual(options.kind));
@@ -54,6 +59,11 @@ export class PickableItem implements Interactable {
 
     options.parent.add(this.object);
     this.object.position.copy(options.position);
+    this.initialRotation.set(
+      this.object.rotation.x,
+      this.object.rotation.y,
+      this.object.rotation.z,
+    );
   }
 
   public canInteract(context: InteractionContext): boolean {
@@ -104,6 +114,18 @@ export class PickableItem implements Interactable {
     parent.add(this.object);
     this.object.position.copy(position);
     this.object.rotation.set(0, 0, 0);
+  }
+
+  public reset(): void {
+    this.state = 'world';
+    this.setHighlighted(false);
+    this.initialParent.add(this.object);
+    this.object.position.copy(this.initialPosition);
+    this.object.rotation.set(
+      this.initialRotation.x,
+      this.initialRotation.y,
+      this.initialRotation.z,
+    );
   }
 
   private createVisual(kind: PickableItemKind): Group {

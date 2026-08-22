@@ -54,6 +54,15 @@ export class InputManager {
     return this.frameActionPresses.has(action);
   }
 
+  public consumeActionPress(action: InputAction): boolean {
+    if (!this.frameActionPresses.has(action)) {
+      return false;
+    }
+
+    this.frameActionPresses.delete(action);
+    return true;
+  }
+
   public dispose(): void {
     for (const source of this.sources) {
       source.dispose();

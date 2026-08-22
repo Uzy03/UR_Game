@@ -5,6 +5,7 @@ const MOVEMENT_CODES = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD']);
 const ACTION_BY_CODE = new Map<string, InputAction>([
   ['KeyE', InputAction.Interact],
   ['Space', InputAction.Interact],
+  ['KeyR', InputAction.Retry],
 ]);
 const HANDLED_CODES = new Set([...MOVEMENT_CODES, ...ACTION_BY_CODE.keys()]);
 

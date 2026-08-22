@@ -46,6 +46,14 @@ export const GAME_CONFIG = {
       halfHeight: 0.45,
     },
   },
+  npc: {
+    id: 'helper-npc',
+    displayName: 'Helper',
+    spawn: { x: 0, y: 0.87, z: 5.5 },
+    taskPosition: { x: -1.35, y: 0.87, z: 5.5 },
+    moveSpeed: 1.8,
+    turnSharpness: 10,
+  },
   camera: {
     fov: 38,
     near: 0.1,
@@ -61,6 +69,31 @@ export const GAME_CONFIG = {
     facingPenalty: 0.85,
     floorDropDistance: 0.9,
     floorItemSpacing: 0.08,
+  },
+  phase2: {
+    taskDurationSeconds: 45,
+    retryPlayerPosition: { x: 0, y: 0.87, z: 4.1 },
+    retryPlayerFacing: 0,
+    successSpeech: 'We did it!',
+    speechDurationSeconds: 2.5,
+    introDialogue: {
+      id: 'phase-2-intro',
+      lines: [
+        { speaker: 'Helper', text: 'Could you give me a hand?' },
+        { speaker: 'Helper', text: 'Please carry these three items to the green counter.' },
+        { speaker: 'Helper', text: 'Try to finish before time runs out!' },
+      ],
+    },
+    placementTask: {
+      id: 'counter-delivery',
+      label: 'Carry all 3 items to the green counter',
+      requiredItemIds: ['tomato-1', 'parcel-1', 'plate-1'],
+      targetPlacePointIds: [
+        'green-counter-left',
+        'green-counter-center',
+        'green-counter-right',
+      ],
+    },
   },
   stage: {
     width: 18,
@@ -104,7 +137,7 @@ export const GAME_CONFIG = {
       {
         id: 'tomato-1',
         kind: 'tomato',
-        position: { x: 0, y: 0, z: 5.2 },
+        position: { x: -2.4, y: 0, z: 3.9 },
       },
       {
         id: 'parcel-1',
@@ -123,8 +156,16 @@ export const GAME_CONFIG = {
         position: { x: -3.6, y: 1.515, z: -1.5 },
       },
       {
-        id: 'green-counter-point',
+        id: 'green-counter-left',
+        position: { x: 2.75, y: 1.415, z: 2 },
+      },
+      {
+        id: 'green-counter-center',
         position: { x: 3.5, y: 1.415, z: 2 },
+      },
+      {
+        id: 'green-counter-right',
+        position: { x: 4.25, y: 1.415, z: 2 },
       },
     ] satisfies readonly StagePlacePointConfig[],
   },

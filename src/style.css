@@ -67,6 +67,117 @@ body,
   display: none;
 }
 
+.task-hud {
+  position: fixed;
+  top: 18px;
+  left: 50%;
+  min-width: 310px;
+  padding: 11px 18px;
+  transform: translateX(-50%);
+  border: 1px solid rgb(255 255 255 / 70%);
+  border-radius: 14px;
+  background: rgb(37 52 61 / 82%);
+  box-shadow: 0 8px 28px rgb(40 74 92 / 18%);
+  color: white;
+  font-size: 14px;
+  font-weight: 700;
+  text-align: center;
+  pointer-events: none;
+  backdrop-filter: blur(8px);
+}
+
+.task-hud [data-task-timer] {
+  margin-top: 4px;
+  color: #ffe89d;
+  font-variant-numeric: tabular-nums;
+}
+
+.dialogue-window {
+  position: fixed;
+  left: 50%;
+  bottom: 28px;
+  width: min(720px, calc(100% - 40px));
+  min-height: 142px;
+  padding: 22px 26px 18px;
+  transform: translateX(-50%);
+  border: 2px solid rgb(255 255 255 / 82%);
+  border-radius: 18px;
+  background: rgb(31 47 59 / 91%);
+  box-shadow: 0 14px 42px rgb(21 45 58 / 30%);
+  color: white;
+  pointer-events: none;
+  backdrop-filter: blur(10px);
+}
+
+.dialogue-speaker {
+  color: #ffe89d;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.dialogue-text {
+  margin-top: 10px;
+  font-size: 18px;
+  line-height: 1.55;
+}
+
+.dialogue-next {
+  margin-top: 12px;
+  color: rgb(255 255 255 / 68%);
+  font-size: 12px;
+  text-align: right;
+}
+
+.result-overlay {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  background: rgb(32 50 61 / 34%);
+  color: white;
+  text-align: center;
+  pointer-events: none;
+  backdrop-filter: blur(2px);
+}
+
+.result-title {
+  color: #fff2a8;
+  font-size: clamp(48px, 9vw, 94px);
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-shadow: 0 5px 18px rgb(26 43 52 / 45%);
+}
+
+.result-retry {
+  margin-top: 18px;
+  font-size: 19px;
+  font-weight: 800;
+}
+
+.speech-bubble {
+  position: fixed;
+  z-index: 2;
+  max-width: 220px;
+  padding: 8px 12px;
+  transform: translate(-50%, -110%);
+  border: 2px solid rgb(41 61 70 / 18%);
+  border-radius: 14px;
+  background: white;
+  box-shadow: 0 7px 20px rgb(31 54 65 / 22%);
+  color: #263d48;
+  font-size: 14px;
+  font-weight: 800;
+  text-align: center;
+  pointer-events: none;
+}
+
+.task-hud[hidden],
+.dialogue-window[hidden],
+.result-overlay[hidden],
+.speech-bubble[hidden] {
+  display: none;
+}
+
 kbd {
   min-width: 22px;
   padding: 3px 5px;

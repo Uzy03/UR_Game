@@ -41,6 +41,10 @@ export class PlacePoint implements Interactable {
     return this.placedItem !== null;
   }
 
+  public get currentItem(): PickableItem | null {
+    return this.placedItem;
+  }
+
   public canInteract(context: InteractionContext): boolean {
     return context.carry.hasItem ? !this.isOccupied : this.isOccupied;
   }
@@ -78,5 +82,10 @@ export class PlacePoint implements Interactable {
 
   public setHighlighted(highlighted: boolean): void {
     this.highlight.visible = highlighted;
+  }
+
+  public reset(): void {
+    this.placedItem = null;
+    this.setHighlighted(false);
   }
 }

@@ -1,6 +1,6 @@
-# Anniversary Game — Phase 1
+# Anniversary Game — Phase 2
 
-交際1周年記念の短編3Dゲームに向けた、Webブラウザ用のゲーム基盤です。Phase 1ではPhase 0の移動・衝突・追従カメラに加え、アイテムを拾う・運ぶ・台や床へ置く操作を実装しています。
+交際1周年記念の短編3Dゲームに向けた、Webブラウザ用のゲーム基盤です。Phase 2では移動・衝突・アイテム運搬を維持しながら、NPC、会話、制限時間付きタスク、成功／失敗、リトライを追加しています。
 
 ## 実行
 
@@ -14,7 +14,10 @@ npm run dev
 ## 操作
 
 - `W` / `A` / `S` / `D`: 移動
-- `E` / `Space`: アイテムを拾う・置く
+- `E` / `Space`: 話す・会話を進める・アイテムを拾う／置く
+- `R`: 時間切れ画面からタスクをリトライ
+
+開始地点の正面にいるNPCへ話しかけると3行の会話が始まり、その後「3個のアイテムを緑のカウンターへ運ぶ」45秒のタスクが始まります。
 
 ## ゲームループ
 
@@ -24,8 +27,9 @@ npm run dev
 2. プレイヤーがRapierへ移動要求を送る
 3. 物理ワールドを進める
 4. 解決後の座標へ描画モデルを同期する
-5. インタラクション対象、保持、配置、追従カメラを更新する
-6. Three.jsで描画する
+5. インタラクション、会話、タスク、NPCを更新する
+6. 追従カメラとNPC吹き出しを更新する
+7. Three.jsで描画する
 
 バックグラウンド復帰時の大きな移動を避けるため、1フレームの `deltaTime` には上限を設けています。
 
@@ -43,8 +47,17 @@ npm run dev
 - `PlacePoint`: 空き・配置済み状態と、台への配置・再取得
 - `FollowCamera`: プレイヤーとは独立したスムーズ追従
 - `Stage`: ダミーステージの表示物と対応する静的コライダーを構築
+- `NPCController`: NPCの表示、Interactable対応、直線移動と向き制御
+- `DialogueManager`: データで渡された会話の現在行と終了を管理
+- `TaskManager`: 実行中タスクと完了通知を管理
+- `PlacementTask`: アイテムIDとPlacePoint IDで設定できる配置成功条件
+- `CountdownTimer`: ゲームループのdeltaTimeで制限時間を管理
+- `Phase2DemoController`: 会話→タスク→結果→リトライの検証フローとゲームモード制御
+- `DialogueUI` / `TaskHUD` / `ResultOverlay` / `SpeechBubble`: DOM表示だけを担当
 
-入力ソースやゲームループの境界を保ち、インタラクション判定を `PlayerController` や `KeyboardInput` に混在させない方針です。アイテムは操作性を優先してDynamicRigidBodyにせず、床・保持・PlacePointへの配置状態を明示的に切り替えています。ステージデータを差し替える仕組みは、複数ステージが実際に必要になった段階で追加します。
+`Phase2DemoController`はPhase 2専用の確認フローであり、汎用イベント実行器ではありません。Phase 3ではこのクラスをEventRunnerへ置き換え、独立APIである`DialogueManager.start()`、`NPCController.moveTo()`、`TaskManager.start()`をイベント列から呼び出す想定です。
+
+入力ソースやゲームループの境界を保ち、キーコードは`KeyboardInput`のみに閉じ込めています。アイテムは操作性を優先してDynamicRigidBodyにせず、床・保持・PlacePointへの配置状態を明示的に切り替えています。
 
 ## 公開前のセキュリティ
 
