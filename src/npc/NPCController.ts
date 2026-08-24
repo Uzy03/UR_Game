@@ -1,4 +1,5 @@
 import { Group, Mesh, Vector3, type Vector3Like } from 'three';
+import { disposeObject3D } from '../core/disposeObject3D';
 import type { Interactable, InteractionContext } from '../interaction/Interactable';
 import { createNPCModel } from './createNPCModel';
 
@@ -24,6 +25,7 @@ export class NPCController implements Interactable {
   private hasDestination = false;
   private interactionEnabled = true;
   private interactionHandler: (() => boolean) | null = null;
+  private disposed = false;
 
   public constructor(private readonly options: NPCControllerOptions) {
     this.id = options.id;
@@ -56,7 +58,7 @@ export class NPCController implements Interactable {
   }
 
   public canInteract(_context: InteractionContext): boolean {
-    return this.interactionEnabled && this.interactionHandler !== null;
+    return !this.disposed && this.interactionEnabled && this.interactionHandler !== null;
   }
 
   public getInteractionLabel(_context: InteractionContext): string {
@@ -64,7 +66,7 @@ export class NPCController implements Interactable {
   }
 
   public interact(_context: InteractionContext): boolean {
-    return this.interactionEnabled && (this.interactionHandler?.() ?? false);
+    return !this.disposed && this.interactionEnabled && (this.interactionHandler?.() ?? false);
   }
 
   public getInteractionPosition(target: Vector3): Vector3 {
@@ -87,7 +89,7 @@ export class NPCController implements Interactable {
   }
 
   public update(deltaSeconds: number): void {
-    if (!this.hasDestination) {
+    if (this.disposed || !this.hasDestination) {
       return;
     }
 
@@ -115,5 +117,18 @@ export class NPCController implements Interactable {
       const blend = 1 - Math.exp(-this.options.turnSharpness * deltaSeconds);
       this.object.rotation.y = currentFacing + shortestAngle * blend;
     }
+  }
+
+  public dispose(): void {
+    if (this.disposed) {
+      return;
+    }
+    this.disposed = true;
+    this.stop();
+    this.interactionHandler = null;
+    this.setHighlighted(false);
+    this.object.removeFromParent();
+    disposeObject3D(this.object);
+    this.object.clear();
   }
 }

@@ -5,6 +5,7 @@ import type { InteractionSystem } from '../interaction/InteractionSystem';
 import type { NPCController } from '../npc/NPCController';
 import type { PlayerController } from '../player/PlayerController';
 import type { PhoneProgressActions } from '../phone/PhoneTypes';
+import type { SceneActions } from '../scene/SceneManager';
 import type { TaskResult } from '../task/Task';
 import type { TaskManager } from '../task/TaskManager';
 import type { ResultOverlay } from '../ui/ResultOverlay';
@@ -34,6 +35,7 @@ interface EventRunnerDependencies {
   readonly npcs: ReadonlyMap<string, NPCController>;
   readonly tasks: ReadonlyMap<string, TaskEventBinding>;
   readonly phoneProgress: PhoneProgressActions;
+  readonly scenes: SceneActions;
 }
 
 interface EventRunnerOptions {
@@ -98,7 +100,8 @@ export class EventRunner {
     this.activeNpc = null;
     this.lastError = null;
     this.runnerState = 'running';
-    this.captureAndDisableNpcInteractions();
+    this.savedNpcInteractionStates.clear();
+    this.disableCurrentNpcInteractionsPreservingSavedState();
     this.captureControls();
     this.setGameplayEnabled(false);
 
@@ -161,7 +164,8 @@ export class EventRunner {
       case 'set_objective':
       case 'unlock_message':
       case 'unlock_photo':
-        // Phone progress events complete during beginCurrentEvent().
+      case 'change_scene':
+        // Synchronous service events complete during beginCurrentEvent().
         break;
     }
   }
@@ -316,6 +320,13 @@ export class EventRunner {
           () => this.dependencies.phoneProgress.unlockPhoto(event.photoId),
         );
         break;
+      case 'change_scene':
+        this.setGameplayEnabled(false);
+        this.runImmediateEvent(event.type, () => {
+          this.dependencies.scenes.loadScene(event.sceneId);
+          this.disableCurrentNpcInteractionsPreservingSavedState();
+        });
+        break;
       default: {
         const unsupported = event as { readonly type?: unknown };
         this.failCurrentEvent(
@@ -466,10 +477,11 @@ export class EventRunner {
     this.savedInteractionEnabled = this.dependencies.interaction.isInteractionEnabled;
   }
 
-  private captureAndDisableNpcInteractions(): void {
-    this.savedNpcInteractionStates.clear();
+  private disableCurrentNpcInteractionsPreservingSavedState(): void {
     for (const npc of this.dependencies.npcs.values()) {
-      this.savedNpcInteractionStates.set(npc, npc.isInteractionEnabled);
+      if (!this.savedNpcInteractionStates.has(npc)) {
+        this.savedNpcInteractionStates.set(npc, npc.isInteractionEnabled);
+      }
       npc.setInteractionEnabled(false);
     }
   }
@@ -482,7 +494,9 @@ export class EventRunner {
       this.dependencies.interaction.setEnabled(this.savedInteractionEnabled);
     }
     for (const [npc, enabled] of this.savedNpcInteractionStates) {
-      npc.setInteractionEnabled(enabled);
+      if (this.dependencies.npcs.get(npc.id) === npc) {
+        npc.setInteractionEnabled(enabled);
+      }
     }
 
     this.savedPlayerMovementEnabled = null;

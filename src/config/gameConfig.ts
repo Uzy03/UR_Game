@@ -1,28 +1,15 @@
-import type { PickableItemKind } from '../interaction/PickableItem';
+import type {
+  StageObstacleDefinition,
+  StagePickableItemDefinition,
+  StagePlacePointDefinition,
+} from '../stage/StageTypes';
 
-export interface Vector3Config {
-  readonly x: number;
-  readonly y: number;
-  readonly z: number;
-}
-
-export interface StageObstacleConfig {
-  readonly kind: 'table' | 'box';
-  readonly position: Vector3Config;
-  readonly size: Vector3Config;
-  readonly color: number;
-}
-
-export interface StagePickableItemConfig {
-  readonly id: string;
-  readonly kind: PickableItemKind;
-  readonly position: Vector3Config;
-}
-
-export interface StagePlacePointConfig {
-  readonly id: string;
-  readonly position: Vector3Config;
-}
+export type {
+  StageObstacleDefinition as StageObstacleConfig,
+  StagePickableItemDefinition as StagePickableItemConfig,
+  StagePlacePointDefinition as StagePlacePointConfig,
+  Vector3Config,
+} from '../stage/StageTypes';
 
 const PLAYER_COLLIDER_RADIUS = 0.42;
 const PLAYER_COLLIDER_HALF_HEIGHT = 0.45;
@@ -145,7 +132,7 @@ export const GAME_CONFIG = {
         size: { x: 0.9, y: 0.9, z: 0.9 },
         color: 0x7da7cf,
       },
-    ] satisfies readonly StageObstacleConfig[],
+    ] satisfies readonly StageObstacleDefinition[],
     items: [
       {
         id: 'tomato-1',
@@ -162,7 +149,7 @@ export const GAME_CONFIG = {
         kind: 'plate',
         position: { x: -1.8, y: 0, z: 2.5 },
       },
-    ] satisfies readonly StagePickableItemConfig[],
+    ] satisfies readonly StagePickableItemDefinition[],
     placePoints: [
       {
         id: 'wood-table-point',
@@ -180,6 +167,6 @@ export const GAME_CONFIG = {
         id: 'green-counter-right',
         position: { x: 4.25, y: 1.415, z: 2 },
       },
-    ] satisfies readonly StagePlacePointConfig[],
+    ] satisfies readonly StagePlacePointDefinition[],
   },
 } as const;

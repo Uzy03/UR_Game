@@ -75,6 +75,11 @@ export class InteractionSystem {
     }
   }
 
+  public clearInteractables(): void {
+    this.clearTargetAndPrompt();
+    this.interactables.clear();
+  }
+
   public setEnabled(enabled: boolean): void {
     if (enabled === this.enabled) {
       return;
@@ -91,8 +96,7 @@ export class InteractionSystem {
   }
 
   public dispose(): void {
-    this.clearTargetAndPrompt();
-    this.interactables.clear();
+    this.clearInteractables();
   }
 
   private refreshTargetAndPrompt(): void {

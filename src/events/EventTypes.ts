@@ -50,6 +50,11 @@ export interface UnlockPhotoEvent {
   readonly photoId: string;
 }
 
+export interface ChangeSceneEvent {
+  readonly type: 'change_scene';
+  readonly sceneId: string;
+}
+
 export type GameEvent =
   | DialogueEvent
   | MoveNpcEvent
@@ -59,7 +64,8 @@ export type GameEvent =
   | SetDateEvent
   | SetObjectiveEvent
   | UnlockMessageEvent
-  | UnlockPhotoEvent;
+  | UnlockPhotoEvent
+  | ChangeSceneEvent;
 
 export interface EventSequence {
   readonly id: string;

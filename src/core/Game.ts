@@ -11,11 +11,20 @@ import {
 } from 'three';
 import { FollowCamera } from '../camera/FollowCamera';
 import { GAME_CONFIG } from '../config/gameConfig';
-import { PHASE4_DEMO_SEQUENCE } from '../content/demo/phase4DemoSequence';
 import { PHASE4_PHONE_CONTENT } from '../content/demo/phase4PhoneContent';
+import {
+  PHASE5_DEMO_SEQUENCE,
+  PHASE5_GARDEN_TALK_SEQUENCE,
+} from '../content/demo/phase5DemoSequence';
+import {
+  PHASE5_GARDEN_SCENE_ID,
+  PHASE5_HELPER_NPC_ID,
+  PHASE5_INITIAL_SCENE_ID,
+  PHASE5_SCENES,
+} from '../content/demo/phase5Scenes';
 import { DialogueManager } from '../dialogue/DialogueManager';
 import { EventRunner } from '../events/EventRunner';
-import { PlacementTaskEventBinding } from '../events/PlacementTaskEventBinding';
+import type { TaskEventBinding } from '../events/TaskEventBinding';
 import { InputManager } from '../input/InputManager';
 import { KeyboardInput } from '../input/KeyboardInput';
 import { CarrySystem } from '../interaction/CarrySystem';
@@ -27,9 +36,9 @@ import { PhoneController } from '../phone/PhoneController';
 import { PhoneProgress } from '../phone/PhoneProgress';
 import { PhoneProgressStore } from '../phone/PhoneProgressStore';
 import { PlayerController } from '../player/PlayerController';
-import { Stage } from '../stage/Stage';
-import { CountdownTimer } from '../task/CountdownTimer';
-import { PlacementTask } from '../task/PlacementTask';
+import { SceneContentRegistry } from '../scene/SceneContentRegistry';
+import { SceneManager, type SceneActions } from '../scene/SceneManager';
+import { SceneRuntime } from '../scene/SceneRuntime';
 import { TaskManager } from '../task/TaskManager';
 import { DialogueUI } from '../ui/DialogueUI';
 import { InteractionPrompt } from '../ui/InteractionPrompt';
@@ -53,12 +62,14 @@ export class Game {
   private readonly input: InputManager;
   private readonly physics: PhysicsWorld;
   private readonly player: PlayerController;
-  private readonly npc: NPCController;
   private readonly interaction: InteractionSystem;
   private readonly eventRunner: EventRunner;
+  private readonly sceneManager: SceneManager;
   private readonly phone: PhoneController;
   private readonly speechBubble: SpeechBubble;
   private readonly followCamera: FollowCamera;
+  private readonly npcs = new Map<string, NPCController>();
+  private readonly tasks = new Map<string, TaskEventBinding>();
   private animationFrameId: number | null = null;
   private lastFrameTime = 0;
 
@@ -83,10 +94,14 @@ export class Game {
     );
 
     this.input = new InputManager([new KeyboardInput(window)]);
-    const stage = new Stage(this.scene, this.physics, GAME_CONFIG.stage);
+    const sceneContent = new SceneContentRegistry(PHASE5_SCENES);
+    const initialScene = sceneContent.getScene(PHASE5_INITIAL_SCENE_ID);
+    if (initialScene === undefined) {
+      throw new Error(`Initial Scene "${PHASE5_INITIAL_SCENE_ID}" is not registered.`);
+    }
 
     const character = this.physics.createKinematicCharacter({
-      position: GAME_CONFIG.player.spawn,
+      position: initialScene.playerSpawn.position,
       radius: GAME_CONFIG.player.collider.radius,
       halfHeight: GAME_CONFIG.player.collider.halfHeight,
       offset: GAME_CONFIG.physics.characterOffset,
@@ -98,64 +113,32 @@ export class Game {
     });
     this.scene.add(this.player.object);
 
-    const carry = new CarrySystem(
-      this.player.carryAnchor,
-      stage.object,
-      stage.pickableItems,
-      (position, item, allItems) => stage.isFloorDropPositionValid(
-        position,
-        item,
-        allItems,
-        GAME_CONFIG.interaction.floorItemSpacing,
-      ),
-    );
+    const carry = new CarrySystem(this.player.carryAnchor);
     this.interaction = new InteractionSystem(
       this.input,
       this.player.object,
       carry,
-      [...stage.pickableItems, ...stage.placePoints],
+      [],
       new InteractionPrompt(requireElement('interaction-prompt')),
       GAME_CONFIG.interaction,
     );
 
-    this.npc = new NPCController({
-      id: GAME_CONFIG.npc.id,
-      displayName: GAME_CONFIG.npc.displayName,
-      position: GAME_CONFIG.npc.spawn,
-      moveSpeed: GAME_CONFIG.npc.moveSpeed,
-      turnSharpness: GAME_CONFIG.npc.turnSharpness,
-    });
-    this.scene.add(this.npc.object);
-    this.interaction.register(this.npc);
-
     const taskManager = new TaskManager();
-    const placementTask = new PlacementTask(new CountdownTimer(), {
-      id: GAME_CONFIG.phase2.placementTask.id,
-      label: GAME_CONFIG.phase2.placementTask.label,
-      requiredItemIds: GAME_CONFIG.phase2.placementTask.requiredItemIds,
-      targetPlacePoints: stage.getPlacePoints(
-        GAME_CONFIG.phase2.placementTask.targetPlacePointIds,
-      ),
-      durationSeconds: GAME_CONFIG.phase2.taskDurationSeconds,
-    });
     const dialogue = new DialogueManager(new DialogueUI(requireElement('dialogue-window')));
     const taskHud = new TaskHUD(requireElement('task-hud'));
     const resultOverlay = new ResultOverlay(requireElement('result-overlay'));
     this.speechBubble = new SpeechBubble(requireElement('speech-bubble'), container);
-    const taskBinding = new PlacementTaskEventBinding({
-      task: placementTask,
-      carry,
-      interaction: this.interaction,
-      items: stage.pickableItems,
-      placePoints: stage.placePoints,
-      player: this.player,
-      playerStartPosition: GAME_CONFIG.phase2.retryPlayerPosition,
-      playerStartFacing: GAME_CONFIG.phase2.retryPlayerFacing,
-      resultOverlay,
-      speechBubble: this.speechBubble,
-    });
     const phoneContent = new PhoneContentRegistry(PHASE4_PHONE_CONTENT);
     const phoneProgress = new PhoneProgress(phoneContent, new PhoneProgressStore());
+    let sceneManagerTarget: SceneManager | null = null;
+    const sceneActions: SceneActions = {
+      loadScene: (sceneId): void => {
+        if (sceneManagerTarget === null) {
+          throw new Error('SceneManager is not ready.');
+        }
+        sceneManagerTarget.loadScene(sceneId);
+      },
+    };
     this.eventRunner = new EventRunner(
       {
         input: this.input,
@@ -166,15 +149,51 @@ export class Game {
         taskHud,
         resultOverlay,
         speechBubble: this.speechBubble,
-        npcs: new Map([[this.npc.id, this.npc]]),
-        tasks: new Map([[placementTask.id, taskBinding]]),
+        npcs: this.npcs,
+        tasks: this.tasks,
         phoneProgress,
+        scenes: sceneActions,
       },
       {
         successResultDurationSeconds: GAME_CONFIG.phase3.successResultDurationSeconds,
       },
     );
-    this.npc.setInteractionHandler(() => this.eventRunner.start(PHASE4_DEMO_SEQUENCE));
+
+    this.sceneManager = new SceneManager({
+      worldRoot: this.scene,
+      content: sceneContent,
+      player: this.player,
+      carry,
+      interaction: this.interaction,
+      npcs: this.npcs,
+      tasks: this.tasks,
+      speechBubble: this.speechBubble,
+      resultOverlay,
+      floorItemSpacing: GAME_CONFIG.interaction.floorItemSpacing,
+      createRuntime: (definition) => SceneRuntime.create(definition, {
+        physics: this.physics,
+        player: this.player,
+        carry,
+        interaction: this.interaction,
+        resultOverlay,
+        speechBubble: this.speechBubble,
+        createNpcInteractionHandler: (sceneId, npcId) => {
+          if (npcId !== PHASE5_HELPER_NPC_ID) {
+            return null;
+          }
+          if (sceneId === PHASE5_INITIAL_SCENE_ID) {
+            return () => this.eventRunner.start(PHASE5_DEMO_SEQUENCE);
+          }
+          if (sceneId === PHASE5_GARDEN_SCENE_ID) {
+            return () => this.eventRunner.start(PHASE5_GARDEN_TALK_SEQUENCE);
+          }
+          return null;
+        },
+      }),
+    });
+    sceneManagerTarget = this.sceneManager;
+    this.sceneManager.loadScene(PHASE5_INITIAL_SCENE_ID);
+
     this.phone = new PhoneController({
       input: this.input,
       player: this.player,
@@ -228,9 +247,9 @@ export class Game {
     }
 
     window.removeEventListener('resize', this.resize);
-    this.npc.setInteractionHandler(null);
     this.phone.dispose();
     this.eventRunner.dispose();
+    this.sceneManager.dispose();
     this.interaction.dispose();
     this.input.dispose();
     this.physics.dispose();
@@ -259,7 +278,9 @@ export class Game {
     // Controllers submit movement before the physics step; visuals only read the resolved pose afterward.
     this.input.update();
     this.phone.update();
-    this.npc.update(deltaSeconds);
+    for (const npc of this.npcs.values()) {
+      npc.update(deltaSeconds);
+    }
     this.player.updateBeforePhysics(deltaSeconds);
     this.physics.step(deltaSeconds);
     this.player.updateAfterPhysics(deltaSeconds);

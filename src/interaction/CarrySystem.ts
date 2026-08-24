@@ -9,13 +9,29 @@ export type FloorDropValidator = (
 
 export class CarrySystem {
   private carriedItem: PickableItem | null = null;
+  private sceneBinding: {
+    readonly worldRoot: Object3D;
+    readonly allItems: readonly PickableItem[];
+    readonly floorDropValidator: FloorDropValidator;
+  } | null = null;
 
   public constructor(
     private readonly carryAnchor: Object3D,
-    private readonly worldRoot: Object3D,
-    private readonly allItems: readonly PickableItem[],
-    private readonly floorDropValidator: FloorDropValidator,
   ) {}
+
+  public bindScene(
+    worldRoot: Object3D,
+    allItems: readonly PickableItem[],
+    floorDropValidator: FloorDropValidator,
+  ): void {
+    this.reset();
+    this.sceneBinding = { worldRoot, allItems, floorDropValidator };
+  }
+
+  public unbindScene(): void {
+    this.reset();
+    this.sceneBinding = null;
+  }
 
   public get hasItem(): boolean {
     return this.carriedItem !== null;
@@ -26,7 +42,11 @@ export class CarrySystem {
   }
 
   public pickUp(item: PickableItem): boolean {
-    if (this.carriedItem !== null) {
+    if (
+      this.carriedItem !== null
+      || this.sceneBinding === null
+      || !this.sceneBinding.allItems.includes(item)
+    ) {
       return false;
     }
 
@@ -43,7 +63,12 @@ export class CarrySystem {
 
   public canDropToFloor(position: Readonly<Vector3Like>): boolean {
     return this.carriedItem !== null
-      && this.floorDropValidator(position, this.carriedItem, this.allItems);
+      && this.sceneBinding !== null
+      && this.sceneBinding.floorDropValidator(
+        position,
+        this.carriedItem,
+        this.sceneBinding.allItems,
+      );
   }
 
   public dropToFloor(position: Readonly<Vector3Like>): boolean {
@@ -53,7 +78,12 @@ export class CarrySystem {
 
     const item = this.carriedItem;
     this.carriedItem = null;
-    item.placeOnFloor(this.worldRoot, position);
+    const binding = this.sceneBinding;
+    if (binding === null) {
+      item.reset();
+      return false;
+    }
+    item.placeOnFloor(binding.worldRoot, position);
     return true;
   }
 
