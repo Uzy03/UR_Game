@@ -4,6 +4,7 @@ import { InputAction } from '../input/InputAction';
 import type { InteractionSystem } from '../interaction/InteractionSystem';
 import type { NPCController } from '../npc/NPCController';
 import type { PlayerController } from '../player/PlayerController';
+import type { PhoneProgressActions } from '../phone/PhoneTypes';
 import type { TaskResult } from '../task/Task';
 import type { TaskManager } from '../task/TaskManager';
 import type { ResultOverlay } from '../ui/ResultOverlay';
@@ -32,6 +33,7 @@ interface EventRunnerDependencies {
   readonly speechBubble: SpeechBubble;
   readonly npcs: ReadonlyMap<string, NPCController>;
   readonly tasks: ReadonlyMap<string, TaskEventBinding>;
+  readonly phoneProgress: PhoneProgressActions;
 }
 
 interface EventRunnerOptions {
@@ -60,6 +62,9 @@ export class EventRunner {
     private readonly dependencies: EventRunnerDependencies,
     private readonly options: EventRunnerOptions,
   ) {
+    if (!this.isValidDuration(options.successResultDurationSeconds)) {
+      throw new Error('Success result duration must be a finite non-negative number.');
+    }
     dependencies.taskManager.setFinishedHandler(this.handleTaskFinished);
   }
 
@@ -151,6 +156,12 @@ export class EventRunner {
         break;
       case 'speech':
         // Speech events complete during beginCurrentEvent().
+        break;
+      case 'set_date':
+      case 'set_objective':
+      case 'unlock_message':
+      case 'unlock_photo':
+        // Phone progress events complete during beginCurrentEvent().
         break;
     }
   }
@@ -281,6 +292,30 @@ export class EventRunner {
         this.startTaskAttempt(binding);
         break;
       }
+      case 'set_date':
+        this.runImmediateEvent(
+          event.type,
+          () => this.dependencies.phoneProgress.setStoryDate(event.date),
+        );
+        break;
+      case 'set_objective':
+        this.runImmediateEvent(
+          event.type,
+          () => this.dependencies.phoneProgress.setObjective(event.objective),
+        );
+        break;
+      case 'unlock_message':
+        this.runImmediateEvent(
+          event.type,
+          () => this.dependencies.phoneProgress.unlockMessage(event.messageId),
+        );
+        break;
+      case 'unlock_photo':
+        this.runImmediateEvent(
+          event.type,
+          () => this.dependencies.phoneProgress.unlockPhoto(event.photoId),
+        );
+        break;
       default: {
         const unsupported = event as { readonly type?: unknown };
         this.failCurrentEvent(
@@ -316,6 +351,16 @@ export class EventRunner {
         this.dependencies.resultOverlay.hide();
         this.completeCurrentEvent();
       }
+    }
+  }
+
+  private runImmediateEvent(eventType: string, action: () => void): void {
+    try {
+      action();
+      this.completeCurrentEvent();
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.failCurrentEvent(message, eventType);
     }
   }
 

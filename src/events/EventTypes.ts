@@ -1,5 +1,6 @@
 import type { Vector3Config } from '../config/gameConfig';
 import type { DialogueSequence } from '../dialogue/DialogueTypes';
+import type { PhoneObjective } from '../phone/PhoneTypes';
 
 export interface DialogueEvent {
   readonly type: 'dialogue';
@@ -29,12 +30,36 @@ export interface WaitEvent {
   readonly durationSeconds: number;
 }
 
+export interface SetDateEvent {
+  readonly type: 'set_date';
+  readonly date: string;
+}
+
+export interface SetObjectiveEvent {
+  readonly type: 'set_objective';
+  readonly objective: PhoneObjective | null;
+}
+
+export interface UnlockMessageEvent {
+  readonly type: 'unlock_message';
+  readonly messageId: string;
+}
+
+export interface UnlockPhotoEvent {
+  readonly type: 'unlock_photo';
+  readonly photoId: string;
+}
+
 export type GameEvent =
   | DialogueEvent
   | MoveNpcEvent
   | TaskEvent
   | SpeechEvent
-  | WaitEvent;
+  | WaitEvent
+  | SetDateEvent
+  | SetObjectiveEvent
+  | UnlockMessageEvent
+  | UnlockPhotoEvent;
 
 export interface EventSequence {
   readonly id: string;

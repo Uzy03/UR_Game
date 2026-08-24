@@ -7,6 +7,8 @@ const ACTION_BY_CODE = new Map<string, InputAction>([
   ['KeyE', InputAction.Interact],
   ['Space', InputAction.Interact],
   ['KeyR', InputAction.Retry],
+  ['KeyF', InputAction.Phone],
+  ['Escape', InputAction.Back],
 ]);
 const HANDLED_CODES = new Set([...MOVEMENT_CODES, ...ACTION_BY_CODE.keys()]);
 

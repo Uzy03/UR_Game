@@ -1,6 +1,6 @@
-# Anniversary Game — Phase 3
+# Anniversary Game — Phase 4
 
-交際1周年記念の短編3Dゲームに向けた、Webブラウザ用のゲーム基盤です。Phase 3ではPhase 2までの移動・インタラクション・NPC・会話・タスクを維持しながら、データで並べたイベントを順番に実行する`EventRunner`を追加しています。
+交際1周年記念の短編3Dゲームに向けた、Webブラウザ用のゲーム基盤です。Phase 4ではPhase 3までの移動・インタラクション・NPC・会話・タスク・`EventRunner`を維持しながら、ゲーム内スマートフォンと進行に応じたメッセージ／写真の解放基盤を追加しています。
 
 ## 実行
 
@@ -16,20 +16,25 @@ npm run dev
 - `W` / `A` / `S` / `D`: 移動
 - `E` / `Space`: 話す・会話を進める・アイテムを拾う／置く
 - `R`: 時間切れ画面からタスクをリトライ
+- `F`: 通常探索中にスマートフォンを開く／閉じる
+- `Escape`: スマートフォン内で戻る。Homeでは閉じる
 
-開始地点の正面にいるNPCへ話しかけると、`dialogue → move_npc → speech → wait → task → speech → wait → dialogue`のイベント列が始まります。タスクは「3個のアイテムを緑のカウンターへ運ぶ」45秒のPlacementTaskです。
+開始地点の正面にいるNPCへ話しかけると、日付・目的の設定、メッセージ解放、既存の会話／移動／タスク、写真解放を含むPhase 4イベント列が始まります。タスクは「3個のアイテムを緑のカウンターへ運ぶ」45秒のPlacementTaskです。イベント完了後にPhoneを開くと、架空のデモメッセージとデモ写真を確認できます。
+
+Phone表示中は移動とInteractionが停止します。`EventRunner`実行中はTimerやNPC移動を安全に保つためPhoneを開けません。
 
 ## ゲームループ
 
 各フレームは次の順番で処理します。
 
 1. 入力ソースを更新し、移動方向へ集約する
-2. プレイヤーがRapierへ移動要求を送る
-3. 物理ワールドを進める
-4. 解決後の座標へ描画モデルを同期する
-5. インタラクション、会話、タスク、NPCを更新する
-6. 追従カメラとNPC吹き出しを更新する
-7. Three.jsで描画する
+2. Phone入力を処理し、必要ならそのフレームからゲーム入力を止める
+3. プレイヤーがRapierへ移動要求を送る
+4. 物理ワールドを進める
+5. 解決後の座標へ描画モデルを同期する
+6. インタラクション、会話、タスク、NPCを更新する
+7. 追従カメラとNPC吹き出しを更新する
+8. Three.jsで描画する
 
 バックグラウンド復帰時の大きな移動を避けるため、1フレームの `deltaTime` には上限を設けています。
 
@@ -53,12 +58,19 @@ npm run dev
 - `PlacementTask`: アイテムIDとPlacePoint IDで設定できる配置成功条件
 - `CountdownTimer`: ゲームループのdeltaTimeで制限時間を管理
 - `EventRunner`: データで定義したイベントをゲームループ上で開始・待機・完了し、cancel/error cleanupも管理
-- `EventTypes`: `dialogue` / `move_npc` / `task` / `speech` / `wait`のDiscriminated Union
+- `EventTypes`: Phase 3の5 EventとPhone進行用4 EventのDiscriminated Union
 - `TaskEventBinding`: Task開始前のゲーム世界リセットをEventRunnerから分離
 - `Phase2DemoController`: Phase 2の参考実装として残しているが、Phase 3の実行経路では使用しない
 - `DialogueUI` / `TaskHUD` / `ResultOverlay` / `SpeechBubble`: DOM表示だけを担当
+- `PhoneContentRegistry`: Message / Photo / Threadの静的定義とID検証
+- `PhoneProgress`: 日付・目的・解放済みIDだけを管理し、変更時に保存
+- `PhoneProgressStore`: バージョン付きPhone進行データだけを`localStorage`へ保存・復元
+- `PhoneController`: Phone開閉、画面遷移、既存入力状態の保存・復元、`EventRunner`との排他
+- `PhoneUI`: Home / Messages / AlbumのDOM表示だけを担当
 
-Phase 3のイベント内容は`src/content/demo/phase3DemoSequence.ts`にあり、順序やセリフを変えてもEventRunner本体を修正する必要はありません。長時間のPromise chainや`setTimeout`は使わず、NPC到着・Dialogue完了・Task結果・wait時間を毎フレームの状態として待ちます。
+Phase 4のイベント内容は`src/content/demo/phase4DemoSequence.ts`、Phoneの架空コンテンツは`src/content/demo/phase4PhoneContent.ts`にあります。長時間のPromise chainや`setTimeout`は使わず、NPC到着・Dialogue完了・Task結果・wait時間を毎フレームの状態として待ちます。Phone進行イベントは`PhoneProgress`を更新して即時完了します。
+
+`localStorage`へ保存するのはPhoneの日付・現在の目的・解放済みMessage ID・Photo IDだけです。Player位置、NPC位置、Task状態、EventRunner状態を含むゲーム全体のSave / LoadはPhase 4の対象外です。
 
 入力ソースやゲームループの境界を保ち、キーコードは`KeyboardInput`のみに閉じ込めています。アイテムは操作性を優先してDynamicRigidBodyにせず、床・保持・PlacePointへの配置状態を明示的に切り替えています。
 

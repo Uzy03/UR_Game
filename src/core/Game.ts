@@ -11,7 +11,8 @@ import {
 } from 'three';
 import { FollowCamera } from '../camera/FollowCamera';
 import { GAME_CONFIG } from '../config/gameConfig';
-import { PHASE3_DEMO_SEQUENCE } from '../content/demo/phase3DemoSequence';
+import { PHASE4_DEMO_SEQUENCE } from '../content/demo/phase4DemoSequence';
+import { PHASE4_PHONE_CONTENT } from '../content/demo/phase4PhoneContent';
 import { DialogueManager } from '../dialogue/DialogueManager';
 import { EventRunner } from '../events/EventRunner';
 import { PlacementTaskEventBinding } from '../events/PlacementTaskEventBinding';
@@ -21,6 +22,10 @@ import { CarrySystem } from '../interaction/CarrySystem';
 import { InteractionSystem } from '../interaction/InteractionSystem';
 import { NPCController } from '../npc/NPCController';
 import { PhysicsWorld } from '../physics/PhysicsWorld';
+import { PhoneContentRegistry } from '../phone/PhoneContentRegistry';
+import { PhoneController } from '../phone/PhoneController';
+import { PhoneProgress } from '../phone/PhoneProgress';
+import { PhoneProgressStore } from '../phone/PhoneProgressStore';
 import { PlayerController } from '../player/PlayerController';
 import { Stage } from '../stage/Stage';
 import { CountdownTimer } from '../task/CountdownTimer';
@@ -31,6 +36,7 @@ import { InteractionPrompt } from '../ui/InteractionPrompt';
 import { ResultOverlay } from '../ui/ResultOverlay';
 import { SpeechBubble } from '../ui/SpeechBubble';
 import { TaskHUD } from '../ui/TaskHUD';
+import { PhoneUI } from '../ui/phone/PhoneUI';
 
 function requireElement(id: string): HTMLElement {
   const element = document.querySelector<HTMLElement>(`#${id}`);
@@ -50,6 +56,7 @@ export class Game {
   private readonly npc: NPCController;
   private readonly interaction: InteractionSystem;
   private readonly eventRunner: EventRunner;
+  private readonly phone: PhoneController;
   private readonly speechBubble: SpeechBubble;
   private readonly followCamera: FollowCamera;
   private animationFrameId: number | null = null;
@@ -147,6 +154,8 @@ export class Game {
       resultOverlay,
       speechBubble: this.speechBubble,
     });
+    const phoneContent = new PhoneContentRegistry(PHASE4_PHONE_CONTENT);
+    const phoneProgress = new PhoneProgress(phoneContent, new PhoneProgressStore());
     this.eventRunner = new EventRunner(
       {
         input: this.input,
@@ -159,12 +168,23 @@ export class Game {
         speechBubble: this.speechBubble,
         npcs: new Map([[this.npc.id, this.npc]]),
         tasks: new Map([[placementTask.id, taskBinding]]),
+        phoneProgress,
       },
       {
         successResultDurationSeconds: GAME_CONFIG.phase3.successResultDurationSeconds,
       },
     );
-    this.npc.setInteractionHandler(() => this.eventRunner.start(PHASE3_DEMO_SEQUENCE));
+    this.npc.setInteractionHandler(() => this.eventRunner.start(PHASE4_DEMO_SEQUENCE));
+    this.phone = new PhoneController({
+      input: this.input,
+      player: this.player,
+      interaction: this.interaction,
+      progress: phoneProgress,
+      content: phoneContent,
+      ui: new PhoneUI(requireElement('phone-overlay')),
+      canOpen: () => this.eventRunner.state !== 'running',
+      focusTarget: this.renderer.domElement,
+    });
 
     this.followCamera = new FollowCamera(this.camera, this.player.object, {
       offset: new Vector3(
@@ -209,6 +229,7 @@ export class Game {
 
     window.removeEventListener('resize', this.resize);
     this.npc.setInteractionHandler(null);
+    this.phone.dispose();
     this.eventRunner.dispose();
     this.interaction.dispose();
     this.input.dispose();
@@ -237,6 +258,7 @@ export class Game {
 
     // Controllers submit movement before the physics step; visuals only read the resolved pose afterward.
     this.input.update();
+    this.phone.update();
     this.npc.update(deltaSeconds);
     this.player.updateBeforePhysics(deltaSeconds);
     this.physics.step(deltaSeconds);

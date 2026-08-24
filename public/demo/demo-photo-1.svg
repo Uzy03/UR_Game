@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 480" role="img" aria-labelledby="title description">
+  <title id="title">Demo landscape illustration</title>
+  <desc id="description">A fictional sunset landscape with hills and two small stars.</desc>
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#8dc9e8" />
+      <stop offset="1" stop-color="#ffd4a3" />
+    </linearGradient>
+  </defs>
+  <rect width="720" height="480" rx="36" fill="url(#sky)" />
+  <circle cx="564" cy="124" r="54" fill="#fff1a6" opacity="0.92" />
+  <path d="M0 330 135 218 260 324 385 190 525 316 630 238 720 306V480H0Z" fill="#659d83" />
+  <path d="M0 382 154 300 296 389 458 276 610 378 720 324V480H0Z" fill="#3f735f" />
+  <path d="m104 84 8 16 18 3-13 13 3 18-16-8-16 8 3-18-13-13 18-3Z" fill="#fff" opacity="0.86" />
+  <path d="m180 126 6 12 14 2-10 10 2 14-12-7-12 7 2-14-10-10 14-2Z" fill="#fff" opacity="0.72" />
+</svg>
