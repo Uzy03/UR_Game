@@ -2,6 +2,7 @@ import type { InputSource, MovementInput } from './InputSource';
 import { InputAction } from './InputAction';
 
 const MOVEMENT_CODES = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD']);
+const MIN_MOVEMENT_TAP_MILLISECONDS = 80;
 const ACTION_BY_CODE = new Map<string, InputAction>([
   ['KeyE', InputAction.Interact],
   ['Space', InputAction.Interact],
@@ -11,6 +12,7 @@ const HANDLED_CODES = new Set([...MOVEMENT_CODES, ...ACTION_BY_CODE.keys()]);
 
 export class KeyboardInput implements InputSource {
   private readonly pressedCodes = new Set<string>();
+  private readonly movementActiveUntil = new Map<string, number>();
   private readonly pendingActionPresses = new Set<InputAction>();
   private readonly frameActionPresses = new Set<InputAction>();
   private readonly movement: { x: number; y: number } = { x: 0, y: 0 };
@@ -22,8 +24,15 @@ export class KeyboardInput implements InputSource {
   }
 
   public update(): void {
-    this.movement.x = Number(this.pressedCodes.has('KeyD')) - Number(this.pressedCodes.has('KeyA'));
-    this.movement.y = Number(this.pressedCodes.has('KeyS')) - Number(this.pressedCodes.has('KeyW'));
+    const now = performance.now();
+    this.movement.x = (
+      Number(this.isMovementCodeActive('KeyD', now))
+      - Number(this.isMovementCodeActive('KeyA', now))
+    );
+    this.movement.y = (
+      Number(this.isMovementCodeActive('KeyS', now))
+      - Number(this.isMovementCodeActive('KeyW', now))
+    );
 
     this.frameActionPresses.clear();
     for (const action of this.pendingActionPresses) {
@@ -55,6 +64,7 @@ export class KeyboardInput implements InputSource {
     this.eventTarget.removeEventListener('keyup', this.onKeyUp);
     this.eventTarget.removeEventListener('blur', this.onBlur);
     this.pressedCodes.clear();
+    this.movementActiveUntil.clear();
     this.pendingActionPresses.clear();
     this.frameActionPresses.clear();
   }
@@ -66,9 +76,17 @@ export class KeyboardInput implements InputSource {
 
     event.preventDefault();
 
-    const action = ACTION_BY_CODE.get(event.code);
-    if (action !== undefined && !this.pressedCodes.has(event.code)) {
-      this.pendingActionPresses.add(action);
+    if (!this.pressedCodes.has(event.code)) {
+      const action = ACTION_BY_CODE.get(event.code);
+      if (action !== undefined) {
+        this.pendingActionPresses.add(action);
+      }
+      if (MOVEMENT_CODES.has(event.code)) {
+        this.movementActiveUntil.set(
+          event.code,
+          performance.now() + MIN_MOVEMENT_TAP_MILLISECONDS,
+        );
+      }
     }
     this.pressedCodes.add(event.code);
   };
@@ -84,7 +102,25 @@ export class KeyboardInput implements InputSource {
 
   private readonly onBlur = (): void => {
     this.pressedCodes.clear();
+    this.movementActiveUntil.clear();
     this.pendingActionPresses.clear();
     this.frameActionPresses.clear();
   };
+
+  private isMovementCodeActive(code: string, now: number): boolean {
+    if (this.pressedCodes.has(code)) {
+      return true;
+    }
+
+    const activeUntil = this.movementActiveUntil.get(code);
+    if (activeUntil === undefined) {
+      return false;
+    }
+    if (activeUntil > now) {
+      return true;
+    }
+
+    this.movementActiveUntil.delete(code);
+    return false;
+  }
 }

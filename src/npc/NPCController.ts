@@ -40,6 +40,14 @@ export class NPCController implements Interactable {
     this.interactionHandler = handler;
   }
 
+  public get isMoving(): boolean {
+    return this.hasDestination;
+  }
+
+  public get isInteractionEnabled(): boolean {
+    return this.interactionEnabled;
+  }
+
   public setInteractionEnabled(enabled: boolean): void {
     this.interactionEnabled = enabled;
     if (!enabled) {

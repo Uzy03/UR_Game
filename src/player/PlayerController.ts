@@ -44,6 +44,10 @@ export class PlayerController {
     this.character.move(this.desiredDisplacement);
   }
 
+  public get isMovementEnabled(): boolean {
+    return this.movementEnabled;
+  }
+
   public setMovementEnabled(enabled: boolean): void {
     this.movementEnabled = enabled;
     if (!enabled) {

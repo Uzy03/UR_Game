@@ -11,7 +11,10 @@ import {
 } from 'three';
 import { FollowCamera } from '../camera/FollowCamera';
 import { GAME_CONFIG } from '../config/gameConfig';
+import { PHASE3_DEMO_SEQUENCE } from '../content/demo/phase3DemoSequence';
 import { DialogueManager } from '../dialogue/DialogueManager';
+import { EventRunner } from '../events/EventRunner';
+import { PlacementTaskEventBinding } from '../events/PlacementTaskEventBinding';
 import { InputManager } from '../input/InputManager';
 import { KeyboardInput } from '../input/KeyboardInput';
 import { CarrySystem } from '../interaction/CarrySystem';
@@ -28,7 +31,6 @@ import { InteractionPrompt } from '../ui/InteractionPrompt';
 import { ResultOverlay } from '../ui/ResultOverlay';
 import { SpeechBubble } from '../ui/SpeechBubble';
 import { TaskHUD } from '../ui/TaskHUD';
-import { Phase2DemoController } from './Phase2DemoController';
 
 function requireElement(id: string): HTMLElement {
   const element = document.querySelector<HTMLElement>(`#${id}`);
@@ -47,7 +49,8 @@ export class Game {
   private readonly player: PlayerController;
   private readonly npc: NPCController;
   private readonly interaction: InteractionSystem;
-  private readonly phase2Demo: Phase2DemoController;
+  private readonly eventRunner: EventRunner;
+  private readonly speechBubble: SpeechBubble;
   private readonly followCamera: FollowCamera;
   private animationFrameId: number | null = null;
   private lastFrameTime = 0;
@@ -128,31 +131,40 @@ export class Game {
       ),
       durationSeconds: GAME_CONFIG.phase2.taskDurationSeconds,
     });
-    this.phase2Demo = new Phase2DemoController(
+    const dialogue = new DialogueManager(new DialogueUI(requireElement('dialogue-window')));
+    const taskHud = new TaskHUD(requireElement('task-hud'));
+    const resultOverlay = new ResultOverlay(requireElement('result-overlay'));
+    this.speechBubble = new SpeechBubble(requireElement('speech-bubble'), container);
+    const taskBinding = new PlacementTaskEventBinding({
+      task: placementTask,
+      carry,
+      interaction: this.interaction,
+      items: stage.pickableItems,
+      placePoints: stage.placePoints,
+      player: this.player,
+      playerStartPosition: GAME_CONFIG.phase2.retryPlayerPosition,
+      playerStartFacing: GAME_CONFIG.phase2.retryPlayerFacing,
+      resultOverlay,
+      speechBubble: this.speechBubble,
+    });
+    this.eventRunner = new EventRunner(
       {
         input: this.input,
         player: this.player,
         interaction: this.interaction,
-        carry,
-        items: stage.pickableItems,
-        placePoints: stage.placePoints,
-        npc: this.npc,
-        dialogue: new DialogueManager(new DialogueUI(requireElement('dialogue-window'))),
+        dialogue,
         taskManager,
-        placementTask,
-        taskHud: new TaskHUD(requireElement('task-hud')),
-        resultOverlay: new ResultOverlay(requireElement('result-overlay')),
-        speechBubble: new SpeechBubble(requireElement('speech-bubble'), container),
+        taskHud,
+        resultOverlay,
+        speechBubble: this.speechBubble,
+        npcs: new Map([[this.npc.id, this.npc]]),
+        tasks: new Map([[placementTask.id, taskBinding]]),
       },
       {
-        introDialogue: GAME_CONFIG.phase2.introDialogue,
-        retryPlayerPosition: GAME_CONFIG.phase2.retryPlayerPosition,
-        retryPlayerFacing: GAME_CONFIG.phase2.retryPlayerFacing,
-        npcTaskPosition: GAME_CONFIG.npc.taskPosition,
-        successSpeech: GAME_CONFIG.phase2.successSpeech,
-        speechDurationSeconds: GAME_CONFIG.phase2.speechDurationSeconds,
+        successResultDurationSeconds: GAME_CONFIG.phase3.successResultDurationSeconds,
       },
     );
+    this.npc.setInteractionHandler(() => this.eventRunner.start(PHASE3_DEMO_SEQUENCE));
 
     this.followCamera = new FollowCamera(this.camera, this.player.object, {
       offset: new Vector3(
@@ -196,7 +208,8 @@ export class Game {
     }
 
     window.removeEventListener('resize', this.resize);
-    this.phase2Demo.dispose();
+    this.npc.setInteractionHandler(null);
+    this.eventRunner.dispose();
     this.interaction.dispose();
     this.input.dispose();
     this.physics.dispose();
@@ -229,9 +242,9 @@ export class Game {
     this.physics.step(deltaSeconds);
     this.player.updateAfterPhysics(deltaSeconds);
     this.interaction.update();
-    this.phase2Demo.update(deltaSeconds);
+    this.eventRunner.update(deltaSeconds);
     this.followCamera.update(deltaSeconds);
-    this.phase2Demo.updatePresentation(this.camera, deltaSeconds);
+    this.speechBubble.update(this.camera, deltaSeconds);
     this.renderer.render(this.scene, this.camera);
 
     this.animationFrameId = requestAnimationFrame(this.frame);

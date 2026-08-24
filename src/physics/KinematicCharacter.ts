@@ -24,11 +24,14 @@ export class KinematicCharacter {
     const correctedMovement = this.controller.computedMovement();
     const currentPosition = this.body.translation();
 
-    this.body.setNextKinematicTranslation({
+    const nextPosition = {
       x: currentPosition.x + correctedMovement.x,
       y: currentPosition.y + correctedMovement.y,
       z: currentPosition.z + correctedMovement.z,
-    });
+    };
+    // The player is gameplay-driven, so commit the corrected pose immediately and keep Rapier's target aligned.
+    this.body.setTranslation(nextPosition, true);
+    this.body.setNextKinematicTranslation(nextPosition);
   }
 
   public copyPositionTo(target: MutableVector3): void {

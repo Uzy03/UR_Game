@@ -1,6 +1,6 @@
-# Anniversary Game — Phase 2
+# Anniversary Game — Phase 3
 
-交際1周年記念の短編3Dゲームに向けた、Webブラウザ用のゲーム基盤です。Phase 2では移動・衝突・アイテム運搬を維持しながら、NPC、会話、制限時間付きタスク、成功／失敗、リトライを追加しています。
+交際1周年記念の短編3Dゲームに向けた、Webブラウザ用のゲーム基盤です。Phase 3ではPhase 2までの移動・インタラクション・NPC・会話・タスクを維持しながら、データで並べたイベントを順番に実行する`EventRunner`を追加しています。
 
 ## 実行
 
@@ -17,7 +17,7 @@ npm run dev
 - `E` / `Space`: 話す・会話を進める・アイテムを拾う／置く
 - `R`: 時間切れ画面からタスクをリトライ
 
-開始地点の正面にいるNPCへ話しかけると3行の会話が始まり、その後「3個のアイテムを緑のカウンターへ運ぶ」45秒のタスクが始まります。
+開始地点の正面にいるNPCへ話しかけると、`dialogue → move_npc → speech → wait → task → speech → wait → dialogue`のイベント列が始まります。タスクは「3個のアイテムを緑のカウンターへ運ぶ」45秒のPlacementTaskです。
 
 ## ゲームループ
 
@@ -52,10 +52,13 @@ npm run dev
 - `TaskManager`: 実行中タスクと完了通知を管理
 - `PlacementTask`: アイテムIDとPlacePoint IDで設定できる配置成功条件
 - `CountdownTimer`: ゲームループのdeltaTimeで制限時間を管理
-- `Phase2DemoController`: 会話→タスク→結果→リトライの検証フローとゲームモード制御
+- `EventRunner`: データで定義したイベントをゲームループ上で開始・待機・完了し、cancel/error cleanupも管理
+- `EventTypes`: `dialogue` / `move_npc` / `task` / `speech` / `wait`のDiscriminated Union
+- `TaskEventBinding`: Task開始前のゲーム世界リセットをEventRunnerから分離
+- `Phase2DemoController`: Phase 2の参考実装として残しているが、Phase 3の実行経路では使用しない
 - `DialogueUI` / `TaskHUD` / `ResultOverlay` / `SpeechBubble`: DOM表示だけを担当
 
-`Phase2DemoController`はPhase 2専用の確認フローであり、汎用イベント実行器ではありません。Phase 3ではこのクラスをEventRunnerへ置き換え、独立APIである`DialogueManager.start()`、`NPCController.moveTo()`、`TaskManager.start()`をイベント列から呼び出す想定です。
+Phase 3のイベント内容は`src/content/demo/phase3DemoSequence.ts`にあり、順序やセリフを変えてもEventRunner本体を修正する必要はありません。長時間のPromise chainや`setTimeout`は使わず、NPC到着・Dialogue完了・Task結果・wait時間を毎フレームの状態として待ちます。
 
 入力ソースやゲームループの境界を保ち、キーコードは`KeyboardInput`のみに閉じ込めています。アイテムは操作性を優先してDynamicRigidBodyにせず、床・保持・PlacePointへの配置状態を明示的に切り替えています。
 

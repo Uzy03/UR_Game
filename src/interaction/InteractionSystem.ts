@@ -64,6 +64,10 @@ export class InteractionSystem {
     this.interactables.add(interactable);
   }
 
+  public get isInteractionEnabled(): boolean {
+    return this.enabled;
+  }
+
   public unregister(interactable: Interactable): void {
     this.interactables.delete(interactable);
     if (this.currentTarget === interactable) {

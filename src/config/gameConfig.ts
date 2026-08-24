@@ -24,6 +24,15 @@ export interface StagePlacePointConfig {
   readonly position: Vector3Config;
 }
 
+const PLAYER_COLLIDER_RADIUS = 0.42;
+const PLAYER_COLLIDER_HALF_HEIGHT = 0.45;
+const CHARACTER_OFFSET = 0.03;
+const PLAYER_GROUNDED_Y = (
+  PLAYER_COLLIDER_RADIUS
+  + PLAYER_COLLIDER_HALF_HEIGHT
+  + CHARACTER_OFFSET
+);
+
 export const GAME_CONFIG = {
   loop: {
     maxDeltaSeconds: 1 / 20,
@@ -34,16 +43,17 @@ export const GAME_CONFIG = {
   },
   physics: {
     gravity: { x: 0, y: -9.81, z: 0 },
-    characterOffset: 0.03,
-    groundProbeSpeed: 3,
+    characterOffset: CHARACTER_OFFSET,
+    // Snap-to-ground needs only a slight downward component; a gravity-sized probe can penetrate the floor.
+    groundProbeSpeed: 0.006,
   },
   player: {
-    spawn: { x: 0, y: 0.87, z: 4.1 },
+    spawn: { x: 0, y: PLAYER_GROUNDED_Y, z: 4.1 },
     speed: 4.4,
     turnSharpness: 14,
     collider: {
-      radius: 0.42,
-      halfHeight: 0.45,
+      radius: PLAYER_COLLIDER_RADIUS,
+      halfHeight: PLAYER_COLLIDER_HALF_HEIGHT,
     },
   },
   npc: {
@@ -72,7 +82,7 @@ export const GAME_CONFIG = {
   },
   phase2: {
     taskDurationSeconds: 45,
-    retryPlayerPosition: { x: 0, y: 0.87, z: 4.1 },
+    retryPlayerPosition: { x: 0, y: PLAYER_GROUNDED_Y, z: 4.1 },
     retryPlayerFacing: 0,
     successSpeech: 'We did it!',
     speechDurationSeconds: 2.5,
@@ -94,6 +104,9 @@ export const GAME_CONFIG = {
         'green-counter-right',
       ],
     },
+  },
+  phase3: {
+    successResultDurationSeconds: 0.9,
   },
   stage: {
     width: 18,
