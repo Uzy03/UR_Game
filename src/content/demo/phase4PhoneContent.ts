@@ -1,5 +1,8 @@
 import type { PhoneContentDefinition } from '../../phone/PhoneTypes';
 
+export const PHASE4_DEMO_MESSAGE_ID = 'demo-message-1';
+export const PHASE4_DEMO_PHOTO_ID = 'demo-photo-1';
+
 export const PHASE4_PHONE_CONTENT = {
   threads: [
     {
@@ -9,7 +12,7 @@ export const PHASE4_PHONE_CONTENT = {
   ],
   messages: [
     {
-      id: 'demo-message-1',
+      id: PHASE4_DEMO_MESSAGE_ID,
       threadId: 'demo-helper-thread',
       sender: 'Helper',
       text: 'Thanks for helping today!',
@@ -18,7 +21,7 @@ export const PHASE4_PHONE_CONTENT = {
   ],
   photos: [
     {
-      id: 'demo-photo-1',
+      id: PHASE4_DEMO_PHOTO_ID,
       src: '/demo/demo-photo-1.svg',
       alt: 'A colorful illustrated landscape used as a demo memory',
       caption: 'A demo memory',

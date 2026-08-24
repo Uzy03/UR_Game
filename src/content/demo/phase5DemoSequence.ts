@@ -1,5 +1,10 @@
 import type { EventSequence } from '../../events/EventTypes';
 import {
+  PHASE4_DEMO_MESSAGE_ID,
+  PHASE4_DEMO_PHOTO_ID,
+} from './phase4PhoneContent';
+import { PHASE6_AFTER_DELIVERY_CHECKPOINT_ID } from './phase6CheckpointIds';
+import {
   PHASE5_GARDEN_SCENE_ID,
   PHASE5_GARDEN_TASK_ID,
   PHASE5_HELPER_NPC_ID,
@@ -31,7 +36,7 @@ export const PHASE5_DEMO_SEQUENCE = {
     },
     {
       type: 'unlock_message',
-      messageId: 'demo-message-1',
+      messageId: PHASE4_DEMO_MESSAGE_ID,
     },
     {
       type: 'change_scene',
@@ -68,7 +73,7 @@ export const PHASE5_DEMO_SEQUENCE = {
     },
     {
       type: 'unlock_photo',
-      photoId: 'demo-photo-1',
+      photoId: PHASE4_DEMO_PHOTO_ID,
     },
     {
       type: 'set_objective',
@@ -92,6 +97,10 @@ export const PHASE5_DEMO_SEQUENCE = {
           { speaker: 'Helper', text: 'Great work. You can explore this scene now.' },
         ],
       },
+    },
+    {
+      type: 'set_checkpoint',
+      checkpointId: PHASE6_AFTER_DELIVERY_CHECKPOINT_ID,
     },
   ],
 } as const satisfies EventSequence;

@@ -5,6 +5,7 @@ import type { InteractionSystem } from '../interaction/InteractionSystem';
 import type { NPCController } from '../npc/NPCController';
 import type { PlayerController } from '../player/PlayerController';
 import type { PhoneProgressActions } from '../phone/PhoneTypes';
+import type { CheckpointActions } from '../save/CheckpointTypes';
 import type { SceneActions } from '../scene/SceneManager';
 import type { TaskResult } from '../task/Task';
 import type { TaskManager } from '../task/TaskManager';
@@ -36,6 +37,7 @@ interface EventRunnerDependencies {
   readonly tasks: ReadonlyMap<string, TaskEventBinding>;
   readonly phoneProgress: PhoneProgressActions;
   readonly scenes: SceneActions;
+  readonly checkpoints: CheckpointActions;
 }
 
 interface EventRunnerOptions {
@@ -165,6 +167,7 @@ export class EventRunner {
       case 'unlock_message':
       case 'unlock_photo':
       case 'change_scene':
+      case 'set_checkpoint':
         // Synchronous service events complete during beginCurrentEvent().
         break;
     }
@@ -326,6 +329,12 @@ export class EventRunner {
           this.dependencies.scenes.loadScene(event.sceneId);
           this.disableCurrentNpcInteractionsPreservingSavedState();
         });
+        break;
+      case 'set_checkpoint':
+        this.runImmediateEvent(
+          event.type,
+          () => this.dependencies.checkpoints.setCheckpoint(event.checkpointId),
+        );
         break;
       default: {
         const unsupported = event as { readonly type?: unknown };

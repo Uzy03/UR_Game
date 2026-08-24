@@ -22,6 +22,8 @@ import {
   PHASE5_INITIAL_SCENE_ID,
   PHASE5_SCENES,
 } from '../content/demo/phase5Scenes';
+import { PHASE6_CHECKPOINTS } from '../content/demo/phase6Checkpoints';
+import { PHASE6_INITIAL_CHECKPOINT_ID } from '../content/demo/phase6CheckpointIds';
 import { DialogueManager } from '../dialogue/DialogueManager';
 import { EventRunner } from '../events/EventRunner';
 import type { TaskEventBinding } from '../events/TaskEventBinding';
@@ -36,6 +38,10 @@ import { PhoneController } from '../phone/PhoneController';
 import { PhoneProgress } from '../phone/PhoneProgress';
 import { PhoneProgressStore } from '../phone/PhoneProgressStore';
 import { PlayerController } from '../player/PlayerController';
+import { CheckpointRegistry } from '../save/CheckpointRegistry';
+import type { CheckpointActions } from '../save/CheckpointTypes';
+import { GameProgressController } from '../save/GameProgressController';
+import { GameSaveStore } from '../save/GameSaveStore';
 import { SceneContentRegistry } from '../scene/SceneContentRegistry';
 import { SceneManager, type SceneActions } from '../scene/SceneManager';
 import { SceneRuntime } from '../scene/SceneRuntime';
@@ -44,6 +50,7 @@ import { DialogueUI } from '../ui/DialogueUI';
 import { InteractionPrompt } from '../ui/InteractionPrompt';
 import { ResultOverlay } from '../ui/ResultOverlay';
 import { SpeechBubble } from '../ui/SpeechBubble';
+import { StartMenu } from '../ui/StartMenu';
 import { TaskHUD } from '../ui/TaskHUD';
 import { PhoneUI } from '../ui/phone/PhoneUI';
 
@@ -66,6 +73,7 @@ export class Game {
   private readonly eventRunner: EventRunner;
   private readonly sceneManager: SceneManager;
   private readonly phone: PhoneController;
+  private readonly progress: GameProgressController;
   private readonly speechBubble: SpeechBubble;
   private readonly followCamera: FollowCamera;
   private readonly npcs = new Map<string, NPCController>();
@@ -130,13 +138,27 @@ export class Game {
     this.speechBubble = new SpeechBubble(requireElement('speech-bubble'), container);
     const phoneContent = new PhoneContentRegistry(PHASE4_PHONE_CONTENT);
     const phoneProgress = new PhoneProgress(phoneContent, new PhoneProgressStore());
+    const checkpointRegistry = new CheckpointRegistry(
+      PHASE6_CHECKPOINTS,
+      sceneContent,
+      phoneContent,
+    );
     let sceneManagerTarget: SceneManager | null = null;
+    let progressTarget: GameProgressController | null = null;
     const sceneActions: SceneActions = {
       loadScene: (sceneId): void => {
         if (sceneManagerTarget === null) {
           throw new Error('SceneManager is not ready.');
         }
         sceneManagerTarget.loadScene(sceneId);
+      },
+    };
+    const checkpointActions: CheckpointActions = {
+      setCheckpoint: (checkpointId): void => {
+        if (progressTarget === null) {
+          throw new Error('GameProgressController is not ready.');
+        }
+        progressTarget.setCheckpoint(checkpointId);
       },
     };
     this.eventRunner = new EventRunner(
@@ -153,6 +175,7 @@ export class Game {
         tasks: this.tasks,
         phoneProgress,
         scenes: sceneActions,
+        checkpoints: checkpointActions,
       },
       {
         successResultDurationSeconds: GAME_CONFIG.phase3.successResultDurationSeconds,
@@ -201,9 +224,31 @@ export class Game {
       progress: phoneProgress,
       content: phoneContent,
       ui: new PhoneUI(requireElement('phone-overlay')),
-      canOpen: () => this.eventRunner.state !== 'running',
+      canOpen: () => (
+        progressTarget?.isGameActive === true
+        && this.eventRunner.state !== 'running'
+      ),
       focusTarget: this.renderer.domElement,
     });
+
+    this.progress = new GameProgressController({
+      initialCheckpointId: PHASE6_INITIAL_CHECKPOINT_ID,
+      checkpoints: checkpointRegistry,
+      saveStore: new GameSaveStore(),
+      sceneManager: this.sceneManager,
+      eventRunner: this.eventRunner,
+      phoneProgress,
+      phone: this.phone,
+      player: this.player,
+      interaction: this.interaction,
+      npcs: this.npcs,
+      menu: new StartMenu(requireElement('start-menu')),
+      focusTarget: this.renderer.domElement,
+    });
+    progressTarget = this.progress;
+
+    // Story sequences remain idle until the player explicitly chooses New Game or Continue.
+    this.progress.boot();
 
     this.followCamera = new FollowCamera(this.camera, this.player.object, {
       offset: new Vector3(
@@ -237,7 +282,9 @@ export class Game {
 
     this.lastFrameTime = performance.now();
     this.animationFrameId = requestAnimationFrame(this.frame);
-    this.renderer.domElement.focus();
+    if (this.progress.isGameActive) {
+      this.renderer.domElement.focus();
+    }
   }
 
   public dispose(): void {
@@ -247,6 +294,7 @@ export class Game {
     }
 
     window.removeEventListener('resize', this.resize);
+    this.progress.dispose();
     this.phone.dispose();
     this.eventRunner.dispose();
     this.sceneManager.dispose();

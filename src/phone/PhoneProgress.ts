@@ -1,12 +1,17 @@
 import type { PhoneContentRegistry } from './PhoneContentRegistry';
 import type { PhoneProgressStore } from './PhoneProgressStore';
+import {
+  createEmptyPhoneProgressSnapshot,
+  isValidPhoneObjective,
+  isValidStoryDate,
+  parsePhoneProgressSnapshot,
+  PHONE_PROGRESS_VERSION,
+} from './PhoneProgressValidation';
 import type {
   PhoneObjective,
   PhoneProgressActions,
   PhoneProgressSnapshot,
 } from './PhoneTypes';
-
-const SNAPSHOT_VERSION = 1;
 
 export class PhoneProgress implements PhoneProgressActions {
   private storyDate: string | null;
@@ -27,7 +32,7 @@ export class PhoneProgress implements PhoneProgressActions {
 
   public get snapshot(): PhoneProgressSnapshot {
     return {
-      version: SNAPSHOT_VERSION,
+      version: PHONE_PROGRESS_VERSION,
       storyDate: this.storyDate,
       currentObjective: this.currentObjective === null
         ? null
@@ -38,7 +43,7 @@ export class PhoneProgress implements PhoneProgressActions {
   }
 
   public setStoryDate(date: string): void {
-    if (!this.isValidStoryDate(date)) {
+    if (!isValidStoryDate(date)) {
       throw new Error(`Invalid story date "${String(date)}". Expected a real YYYY-MM-DD date.`);
     }
     if (this.storyDate === date) {
@@ -49,7 +54,7 @@ export class PhoneProgress implements PhoneProgressActions {
   }
 
   public setObjective(objective: PhoneObjective | null): void {
-    if (!this.isValidObjective(objective)) {
+    if (!isValidPhoneObjective(objective)) {
       throw new Error('Phone objective must contain non-empty id and text values.');
     }
 
@@ -86,32 +91,31 @@ export class PhoneProgress implements PhoneProgressActions {
     this.save();
   }
 
+  public replace(snapshot: PhoneProgressSnapshot): void {
+    const parsed = parsePhoneProgressSnapshot(snapshot, this.registry, 'reject');
+    if (parsed === null) {
+      throw new Error('Cannot replace Phone progress with an invalid snapshot.');
+    }
+
+    this.storyDate = parsed.storyDate;
+    this.currentObjective = parsed.currentObjective;
+    this.unlockedMessageIds.clear();
+    this.unlockedPhotoIds.clear();
+    for (const messageId of parsed.unlockedMessageIds) {
+      this.unlockedMessageIds.add(messageId);
+    }
+    for (const photoId of parsed.unlockedPhotoIds) {
+      this.unlockedPhotoIds.add(photoId);
+    }
+    this.save();
+  }
+
+  public reset(): void {
+    this.replace(createEmptyPhoneProgressSnapshot());
+  }
+
   private save(): void {
     this.store.save(this.snapshot);
   }
 
-  private isValidObjective(value: PhoneObjective | null): boolean {
-    return value === null
-      || (
-        typeof value.id === 'string'
-        && value.id.trim().length > 0
-        && typeof value.text === 'string'
-        && value.text.trim().length > 0
-      );
-  }
-
-  private isValidStoryDate(value: string): boolean {
-    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
-    if (match === null) {
-      return false;
-    }
-
-    const year = Number(match[1]);
-    const month = Number(match[2]);
-    const day = Number(match[3]);
-    const date = new Date(Date.UTC(year, month - 1, day));
-    return date.getUTCFullYear() === year
-      && date.getUTCMonth() === month - 1
-      && date.getUTCDate() === day;
-  }
 }

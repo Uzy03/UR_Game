@@ -55,6 +55,11 @@ export interface ChangeSceneEvent {
   readonly sceneId: string;
 }
 
+export interface SetCheckpointEvent {
+  readonly type: 'set_checkpoint';
+  readonly checkpointId: string;
+}
+
 export type GameEvent =
   | DialogueEvent
   | MoveNpcEvent
@@ -65,7 +70,8 @@ export type GameEvent =
   | SetObjectiveEvent
   | UnlockMessageEvent
   | UnlockPhotoEvent
-  | ChangeSceneEvent;
+  | ChangeSceneEvent
+  | SetCheckpointEvent;
 
 export interface EventSequence {
   readonly id: string;

@@ -25,6 +25,113 @@ body,
   outline: none;
 }
 
+.start-menu {
+  position: fixed;
+  z-index: 30;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background:
+    radial-gradient(circle at 20% 12%, rgb(255 244 201 / 58%), transparent 34%),
+    rgb(34 54 65 / 56%);
+  backdrop-filter: blur(8px);
+}
+
+.start-menu[hidden] {
+  display: none;
+}
+
+.start-menu-panel {
+  width: min(430px, calc(100vw - 40px));
+  padding: 34px;
+  border: 1px solid rgb(255 255 255 / 78%);
+  border-radius: 28px;
+  background: rgb(250 253 253 / 94%);
+  box-shadow: 0 24px 80px rgb(18 39 51 / 35%);
+  text-align: center;
+}
+
+.start-menu-phase {
+  margin: 0;
+  color: #648390;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.start-menu h1 {
+  margin: 8px 0 0;
+  color: #294957;
+  font-size: clamp(30px, 7vw, 42px);
+  letter-spacing: -0.04em;
+}
+
+.start-menu-description {
+  margin: 12px auto 24px;
+  max-width: 320px;
+  color: #66808b;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.start-menu-actions {
+  display: grid;
+  gap: 10px;
+}
+
+.start-menu-actions button {
+  min-height: 48px;
+  padding: 11px 18px;
+  border: 1px solid rgb(66 105 122 / 18%);
+  border-radius: 14px;
+  background: #eaf3f5;
+  color: #315464;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.start-menu-actions button:hover:not(:disabled),
+.start-menu-actions button:focus-visible {
+  outline: 3px solid rgb(85 151 176 / 25%);
+  background: #dceff3;
+}
+
+.start-menu-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.start-menu-actions .start-menu-primary {
+  border-color: transparent;
+  background: #4e899e;
+  color: white;
+}
+
+.start-menu-actions .start-menu-primary:hover:not(:disabled),
+.start-menu-actions .start-menu-primary:focus-visible {
+  background: #407b90;
+}
+
+.start-menu-actions .start-menu-reset {
+  margin-top: 6px;
+  border-color: transparent;
+  background: transparent;
+  color: #8a6262;
+  font-size: 12px;
+}
+
+.start-menu-status {
+  min-height: 1.4em;
+  margin: 16px 0 0;
+  color: #9b4f4f;
+  font-size: 12px;
+  font-weight: 700;
+}
+
 .controls {
   position: fixed;
   right: 18px;

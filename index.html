@@ -4,10 +4,23 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#b9d9e8" />
-    <title>Anniversary Game — Phase 5</title>
+    <title>Anniversary Game — Phase 6</title>
   </head>
   <body>
     <main id="app" aria-label="3D game"></main>
+    <section id="start-menu" class="start-menu">
+      <div class="start-menu-panel" role="dialog" aria-modal="true" aria-labelledby="start-menu-title">
+        <p class="start-menu-phase">Phase 6 Demo</p>
+        <h1 id="start-menu-title">Anniversary Game</h1>
+        <p class="start-menu-description">Resume safely from the latest story checkpoint.</p>
+        <div class="start-menu-actions">
+          <button type="button" class="start-menu-primary" data-start-new>New Game</button>
+          <button type="button" data-start-continue disabled>Continue</button>
+          <button type="button" class="start-menu-reset" data-start-reset hidden>Reset Progress</button>
+        </div>
+        <p class="start-menu-status" data-start-status role="status" aria-live="polite"></p>
+      </div>
+    </section>
     <section id="task-hud" class="task-hud" aria-live="polite" hidden>
       <div data-task-label></div>
       <div data-task-timer></div>
