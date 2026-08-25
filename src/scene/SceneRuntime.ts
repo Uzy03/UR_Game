@@ -1,5 +1,6 @@
 import { Group } from 'three';
 import { PlacementTaskEventBinding } from '../events/PlacementTaskEventBinding';
+import { ReachZoneTaskEventBinding } from '../events/ReachZoneTaskEventBinding';
 import type { TaskEventBinding } from '../events/TaskEventBinding';
 import type { CarrySystem } from '../interaction/CarrySystem';
 import type { InteractionSystem } from '../interaction/InteractionSystem';
@@ -9,6 +10,7 @@ import type { PlayerController } from '../player/PlayerController';
 import { Stage } from '../stage/Stage';
 import { CountdownTimer } from '../task/CountdownTimer';
 import { PlacementTask } from '../task/PlacementTask';
+import { ReachZoneTask } from '../task/ReachZoneTask';
 import type { ResultOverlay } from '../ui/ResultOverlay';
 import type { SpeechBubble } from '../ui/SpeechBubble';
 import type { SceneDefinition } from './SceneTypes';
@@ -75,7 +77,7 @@ export class SceneRuntime {
         npcs.push(npc);
       }
 
-      const taskBindings = definition.placementTasks.map((taskDefinition) => {
+      const taskBindings: TaskEventBinding[] = definition.placementTasks.map((taskDefinition) => {
         const task = new PlacementTask(new CountdownTimer(), {
           id: taskDefinition.id,
           label: taskDefinition.label,
@@ -96,6 +98,23 @@ export class SceneRuntime {
           speechBubble: dependencies.speechBubble,
         });
       });
+
+      for (const taskDefinition of definition.reachTasks ?? []) {
+        const task = new ReachZoneTask({
+          id: taskDefinition.id,
+          label: taskDefinition.label,
+          playerPosition: dependencies.player.object.position,
+          targetPosition: taskDefinition.targetPosition,
+          radius: taskDefinition.radius,
+          markerParent: activeStage.object,
+        });
+        taskBindings.push(new ReachZoneTaskEventBinding({
+          task,
+          interaction: dependencies.interaction,
+          resultOverlay: dependencies.resultOverlay,
+          speechBubble: dependencies.speechBubble,
+        }));
+      }
 
       return new SceneRuntime(definition, root, stage, npcs, taskBindings);
     } catch (error: unknown) {

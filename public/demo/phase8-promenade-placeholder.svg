@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="640" viewBox="0 0 960 640" role="img" aria-labelledby="title desc">
+  <title id="title">Fictional promenade memory</title>
+  <desc id="desc">A stylized fountain beside a sunny path and distant viewpoint.</desc>
+  <rect width="960" height="640" fill="#cfe8f3"/>
+  <circle cx="790" cy="105" r="62" fill="#ffd979"/>
+  <path d="M0 340C170 285 310 320 455 294C615 265 758 292 960 230V640H0Z" fill="#91bd7b"/>
+  <path d="M420 640C438 504 493 407 613 314C665 274 742 246 834 216L960 271C832 316 749 359 686 416C607 488 568 560 554 640Z" fill="#ead7ac"/>
+  <ellipse cx="295" cy="440" rx="158" ry="58" fill="#679caa"/>
+  <ellipse cx="295" cy="422" rx="122" ry="40" fill="#9dd6df"/>
+  <rect x="278" y="298" width="34" height="127" rx="12" fill="#d8e7e1"/>
+  <path d="M295 296C249 339 235 365 232 407M295 296C341 339 355 365 358 407" fill="none" stroke="#edf9f8" stroke-width="14" stroke-linecap="round"/>
+  <path d="M65 334L133 216L201 334Z" fill="#477b58"/>
+  <rect x="125" y="330" width="16" height="94" fill="#8b6849"/>
+  <path d="M700 250L774 122L848 250Z" fill="#4d805d"/>
+  <rect x="766" y="246" width="16" height="88" fill="#8b6849"/>
+  <rect x="75" y="545" width="250" height="58" rx="16" fill="#315762" opacity="0.9"/>
+  <text x="200" y="581" text-anchor="middle" font-family="system-ui, sans-serif" font-size="25" fill="#ffffff">DEMO PROMENADE</text>
+</svg>

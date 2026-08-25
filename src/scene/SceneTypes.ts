@@ -23,10 +23,18 @@ export interface ScenePlacementTaskDefinition {
   readonly attemptPlayerFacing: number;
 }
 
+export interface SceneReachTaskDefinition {
+  readonly id: string;
+  readonly label: string;
+  readonly targetPosition: Vector3Config;
+  readonly radius: number;
+}
+
 export interface SceneDefinition {
   readonly id: string;
   readonly playerSpawn: ScenePlayerSpawnDefinition;
   readonly stage: StageDefinition;
   readonly npcs: readonly SceneNpcDefinition[];
   readonly placementTasks: readonly ScenePlacementTaskDefinition[];
+  readonly reachTasks?: readonly SceneReachTaskDefinition[];
 }

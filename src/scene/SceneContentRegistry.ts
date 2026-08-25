@@ -74,6 +74,18 @@ export class SceneContentRegistry {
         }
       }
     }
+
+    for (const task of definition.reachTasks ?? []) {
+      this.assertUniqueId(task.id, taskIds, `Scene "${definition.id}" Task`);
+      if (task.label.trim().length === 0) {
+        throw new Error(`Scene "${definition.id}" Task "${task.id}" has an empty label.`);
+      }
+      this.assertVector(
+        task.targetPosition,
+        `Scene "${definition.id}" Task "${task.id}" target position`,
+      );
+      this.assertPositive(task.radius, `Scene "${definition.id}" Task "${task.id}" radius`);
+    }
   }
 
   private validateStage(sceneId: string, stage: StageDefinition): void {

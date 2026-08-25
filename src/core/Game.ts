@@ -20,13 +20,13 @@ import {
   PHASE5_HELPER_NPC_ID,
   PHASE5_INITIAL_SCENE_ID,
 } from '../content/demo/phase5Scenes';
-import { PHASE7_CHECKPOINTS } from '../content/demo/phase7Checkpoints';
 import {
-  PHASE7_BEDROOM_SCENE_ID,
-  PHASE7_INITIAL_CHECKPOINT_ID,
-} from '../content/demo/phase7Ids';
-import { PHASE7_PHONE_CONTENT } from '../content/demo/phase7PhoneContent';
-import { PHASE7_SCENES } from '../content/demo/phase7Scenes';
+  PHASE8_INITIAL_CHECKPOINT_ID,
+  PHASE8_PROMENADE_SCENE_ID,
+} from '../content/demo/phase8Ids';
+import { PHASE8_CHECKPOINTS } from '../content/demo/phase8Checkpoints';
+import { PHASE8_PHONE_CONTENT } from '../content/demo/phase8PhoneContent';
+import { PHASE8_SCENES } from '../content/demo/phase8Scenes';
 import { DialogueManager } from '../dialogue/DialogueManager';
 import { EventRunner } from '../events/EventRunner';
 import type { TaskEventBinding } from '../events/TaskEventBinding';
@@ -106,10 +106,10 @@ export class Game {
     );
 
     this.input = new InputManager([new KeyboardInput(window)]);
-    const sceneContent = new SceneContentRegistry(PHASE7_SCENES);
-    const initialScene = sceneContent.getScene(PHASE7_BEDROOM_SCENE_ID);
+    const sceneContent = new SceneContentRegistry(PHASE8_SCENES);
+    const initialScene = sceneContent.getScene(PHASE8_PROMENADE_SCENE_ID);
     if (initialScene === undefined) {
-      throw new Error(`Initial Scene "${PHASE7_BEDROOM_SCENE_ID}" is not registered.`);
+      throw new Error(`Initial Scene "${PHASE8_PROMENADE_SCENE_ID}" is not registered.`);
     }
 
     const character = this.physics.createKinematicCharacter({
@@ -140,10 +140,10 @@ export class Game {
     const taskHud = new TaskHUD(requireElement('task-hud'));
     const resultOverlay = new ResultOverlay(requireElement('result-overlay'));
     this.speechBubble = new SpeechBubble(requireElement('speech-bubble'), container);
-    const phoneContent = new PhoneContentRegistry(PHASE7_PHONE_CONTENT);
+    const phoneContent = new PhoneContentRegistry(PHASE8_PHONE_CONTENT);
     const phoneProgress = new PhoneProgress(phoneContent, new PhoneProgressStore());
     const checkpointRegistry = new CheckpointRegistry(
-      PHASE7_CHECKPOINTS,
+      PHASE8_CHECKPOINTS,
       sceneContent,
       phoneContent,
     );
@@ -232,7 +232,7 @@ export class Game {
       }),
     });
     sceneManagerTarget = this.sceneManager;
-    this.sceneManager.loadScene(PHASE7_BEDROOM_SCENE_ID);
+    this.sceneManager.loadScene(PHASE8_PROMENADE_SCENE_ID);
 
     this.phone = new PhoneController({
       input: this.input,
@@ -250,7 +250,7 @@ export class Game {
     phoneTarget = this.phone;
 
     this.progress = new GameProgressController({
-      initialCheckpointId: PHASE7_INITIAL_CHECKPOINT_ID,
+      initialCheckpointId: PHASE8_INITIAL_CHECKPOINT_ID,
       checkpoints: checkpointRegistry,
       saveStore: new GameSaveStore(),
       sceneManager: this.sceneManager,
