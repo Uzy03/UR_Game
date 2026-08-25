@@ -11,7 +11,6 @@ import {
 } from 'three';
 import { FollowCamera } from '../camera/FollowCamera';
 import { GAME_CONFIG } from '../config/gameConfig';
-import { PHASE4_PHONE_CONTENT } from '../content/demo/phase4PhoneContent';
 import {
   PHASE5_DEMO_SEQUENCE,
   PHASE5_GARDEN_TALK_SEQUENCE,
@@ -20,10 +19,14 @@ import {
   PHASE5_GARDEN_SCENE_ID,
   PHASE5_HELPER_NPC_ID,
   PHASE5_INITIAL_SCENE_ID,
-  PHASE5_SCENES,
 } from '../content/demo/phase5Scenes';
-import { PHASE6_CHECKPOINTS } from '../content/demo/phase6Checkpoints';
-import { PHASE6_INITIAL_CHECKPOINT_ID } from '../content/demo/phase6CheckpointIds';
+import { PHASE7_CHECKPOINTS } from '../content/demo/phase7Checkpoints';
+import {
+  PHASE7_BEDROOM_SCENE_ID,
+  PHASE7_INITIAL_CHECKPOINT_ID,
+} from '../content/demo/phase7Ids';
+import { PHASE7_PHONE_CONTENT } from '../content/demo/phase7PhoneContent';
+import { PHASE7_SCENES } from '../content/demo/phase7Scenes';
 import { DialogueManager } from '../dialogue/DialogueManager';
 import { EventRunner } from '../events/EventRunner';
 import type { TaskEventBinding } from '../events/TaskEventBinding';
@@ -37,6 +40,7 @@ import { PhoneContentRegistry } from '../phone/PhoneContentRegistry';
 import { PhoneController } from '../phone/PhoneController';
 import { PhoneProgress } from '../phone/PhoneProgress';
 import { PhoneProgressStore } from '../phone/PhoneProgressStore';
+import type { PhoneStoryActions } from '../phone/PhoneTypes';
 import { PlayerController } from '../player/PlayerController';
 import { CheckpointRegistry } from '../save/CheckpointRegistry';
 import type { CheckpointActions } from '../save/CheckpointTypes';
@@ -102,10 +106,10 @@ export class Game {
     );
 
     this.input = new InputManager([new KeyboardInput(window)]);
-    const sceneContent = new SceneContentRegistry(PHASE5_SCENES);
-    const initialScene = sceneContent.getScene(PHASE5_INITIAL_SCENE_ID);
+    const sceneContent = new SceneContentRegistry(PHASE7_SCENES);
+    const initialScene = sceneContent.getScene(PHASE7_BEDROOM_SCENE_ID);
     if (initialScene === undefined) {
-      throw new Error(`Initial Scene "${PHASE5_INITIAL_SCENE_ID}" is not registered.`);
+      throw new Error(`Initial Scene "${PHASE7_BEDROOM_SCENE_ID}" is not registered.`);
     }
 
     const character = this.physics.createKinematicCharacter({
@@ -136,15 +140,16 @@ export class Game {
     const taskHud = new TaskHUD(requireElement('task-hud'));
     const resultOverlay = new ResultOverlay(requireElement('result-overlay'));
     this.speechBubble = new SpeechBubble(requireElement('speech-bubble'), container);
-    const phoneContent = new PhoneContentRegistry(PHASE4_PHONE_CONTENT);
+    const phoneContent = new PhoneContentRegistry(PHASE7_PHONE_CONTENT);
     const phoneProgress = new PhoneProgress(phoneContent, new PhoneProgressStore());
     const checkpointRegistry = new CheckpointRegistry(
-      PHASE6_CHECKPOINTS,
+      PHASE7_CHECKPOINTS,
       sceneContent,
       phoneContent,
     );
     let sceneManagerTarget: SceneManager | null = null;
     let progressTarget: GameProgressController | null = null;
+    let phoneTarget: PhoneController | null = null;
     const sceneActions: SceneActions = {
       loadScene: (sceneId): void => {
         if (sceneManagerTarget === null) {
@@ -161,6 +166,17 @@ export class Game {
         progressTarget.setCheckpoint(checkpointId);
       },
     };
+    const phoneStoryActions: PhoneStoryActions = {
+      presentStoryCard: (card, onComplete): boolean => {
+        if (phoneTarget === null) {
+          throw new Error('PhoneController is not ready.');
+        }
+        return phoneTarget.presentStoryCard(card, onComplete);
+      },
+      cancelStoryPresentation: (): void => {
+        phoneTarget?.cancelStoryPresentation();
+      },
+    };
     this.eventRunner = new EventRunner(
       {
         input: this.input,
@@ -174,6 +190,7 @@ export class Game {
         npcs: this.npcs,
         tasks: this.tasks,
         phoneProgress,
+        phoneStory: phoneStoryActions,
         scenes: sceneActions,
         checkpoints: checkpointActions,
       },
@@ -215,7 +232,7 @@ export class Game {
       }),
     });
     sceneManagerTarget = this.sceneManager;
-    this.sceneManager.loadScene(PHASE5_INITIAL_SCENE_ID);
+    this.sceneManager.loadScene(PHASE7_BEDROOM_SCENE_ID);
 
     this.phone = new PhoneController({
       input: this.input,
@@ -230,9 +247,10 @@ export class Game {
       ),
       focusTarget: this.renderer.domElement,
     });
+    phoneTarget = this.phone;
 
     this.progress = new GameProgressController({
-      initialCheckpointId: PHASE6_INITIAL_CHECKPOINT_ID,
+      initialCheckpointId: PHASE7_INITIAL_CHECKPOINT_ID,
       checkpoints: checkpointRegistry,
       saveStore: new GameSaveStore(),
       sceneManager: this.sceneManager,
@@ -295,8 +313,8 @@ export class Game {
 
     window.removeEventListener('resize', this.resize);
     this.progress.dispose();
-    this.phone.dispose();
     this.eventRunner.dispose();
+    this.phone.dispose();
     this.sceneManager.dispose();
     this.interaction.dispose();
     this.input.dispose();

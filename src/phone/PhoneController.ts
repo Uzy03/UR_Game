@@ -9,6 +9,8 @@ import type {
   PhoneMessageDefinition,
   PhonePhotoDefinition,
   PhoneScreen,
+  PhoneStoryActions,
+  PhoneStoryCard,
 } from './PhoneTypes';
 
 interface PhoneControllerOptions {
@@ -22,11 +24,15 @@ interface PhoneControllerOptions {
   readonly focusTarget: HTMLElement;
 }
 
-export class PhoneController {
-  private screen: PhoneScreen = 'home';
-  private openState = false;
+type NormalPhoneScreen = Exclude<PhoneScreen, 'story'>;
+type PhonePresentationMode = 'closed' | 'normal' | 'story';
+
+export class PhoneController implements PhoneStoryActions {
+  private screen: NormalPhoneScreen = 'home';
+  private mode: PhonePresentationMode = 'closed';
   private savedMovementEnabled: boolean | null = null;
   private savedInteractionEnabled: boolean | null = null;
+  private storyCompletedHandler: (() => void) | null = null;
 
   public constructor(private readonly options: PhoneControllerOptions) {
     options.ui.setHandlers({
@@ -37,12 +43,19 @@ export class PhoneController {
   }
 
   public get isOpen(): boolean {
-    return this.openState;
+    return this.mode !== 'closed';
+  }
+
+  public get isStoryPresenting(): boolean {
+    return this.mode === 'story';
   }
 
   public update(): void {
     if (this.options.input.consumeActionPress(InputAction.Phone)) {
-      if (this.openState) {
+      if (this.mode === 'story') {
+        return;
+      }
+      if (this.mode === 'normal') {
         this.close();
       } else {
         this.open();
@@ -50,13 +63,13 @@ export class PhoneController {
       return;
     }
 
-    if (this.openState && this.options.input.consumeActionPress(InputAction.Back)) {
+    if (this.mode === 'normal' && this.options.input.consumeActionPress(InputAction.Back)) {
       this.back();
     }
   }
 
   public open(): boolean {
-    if (this.openState || !this.options.canOpen()) {
+    if (this.mode !== 'closed' || !this.options.canOpen()) {
       return false;
     }
 
@@ -64,7 +77,7 @@ export class PhoneController {
     this.savedInteractionEnabled = this.options.interaction.isInteractionEnabled;
     this.options.player.setMovementEnabled(false);
     this.options.interaction.setEnabled(false);
-    this.openState = true;
+    this.mode = 'normal';
     this.screen = 'home';
     this.renderCurrentScreen();
     this.options.ui.show();
@@ -72,12 +85,12 @@ export class PhoneController {
   }
 
   public readonly close = (): void => {
-    if (!this.openState) {
+    if (this.mode !== 'normal') {
       return;
     }
 
     this.options.ui.hide();
-    this.openState = false;
+    this.mode = 'closed';
     if (this.savedMovementEnabled !== null) {
       this.options.player.setMovementEnabled(this.savedMovementEnabled);
     }
@@ -90,7 +103,7 @@ export class PhoneController {
   };
 
   public readonly back = (): void => {
-    if (!this.openState) {
+    if (this.mode !== 'normal') {
       return;
     }
     if (this.screen === 'home') {
@@ -102,13 +115,47 @@ export class PhoneController {
     this.renderCurrentScreen();
   };
 
+  public presentStoryCard(card: PhoneStoryCard, onComplete: () => void): boolean {
+    if (this.mode !== 'closed') {
+      return false;
+    }
+
+    this.mode = 'story';
+    this.storyCompletedHandler = onComplete;
+    try {
+      const actionButton = this.options.ui.renderStoryCard(
+        card,
+        this.completeStoryPresentation,
+      );
+      this.options.ui.show(actionButton);
+      return true;
+    } catch (error: unknown) {
+      this.storyCompletedHandler = null;
+      this.mode = 'closed';
+      this.options.ui.hide();
+      throw error;
+    }
+  }
+
+  public cancelStoryPresentation(): void {
+    if (this.mode !== 'story') {
+      return;
+    }
+
+    this.storyCompletedHandler = null;
+    this.mode = 'closed';
+    this.options.ui.hide();
+    this.options.focusTarget.focus();
+  }
+
   public dispose(): void {
+    this.cancelStoryPresentation();
     this.close();
     this.options.ui.dispose();
   }
 
   private readonly showMessages = (): void => {
-    if (!this.openState) {
+    if (this.mode !== 'normal') {
       return;
     }
     this.screen = 'messages';
@@ -116,7 +163,7 @@ export class PhoneController {
   };
 
   private readonly showAlbum = (): void => {
-    if (!this.openState) {
+    if (this.mode !== 'normal') {
       return;
     }
     this.screen = 'album';
@@ -137,6 +184,19 @@ export class PhoneController {
         break;
     }
   }
+
+  private readonly completeStoryPresentation = (): void => {
+    if (this.mode !== 'story') {
+      return;
+    }
+
+    const completedHandler = this.storyCompletedHandler;
+    this.storyCompletedHandler = null;
+    this.mode = 'closed';
+    this.options.ui.hide();
+    this.options.focusTarget.focus();
+    completedHandler?.();
+  };
 
   private resolveMessageThreads(
     messageIds: readonly string[],

@@ -45,4 +45,18 @@ export interface PhoneProgressActions {
   unlockPhoto(photoId: string): void;
 }
 
-export type PhoneScreen = 'home' | 'messages' | 'album';
+export interface PhoneStoryCard {
+  readonly id: string;
+  readonly appLabel: string;
+  readonly title: string;
+  readonly subtitle?: string;
+  readonly body: string;
+  readonly actionLabel: string;
+}
+
+export interface PhoneStoryActions {
+  presentStoryCard(card: PhoneStoryCard, onComplete: () => void): boolean;
+  cancelStoryPresentation(): void;
+}
+
+export type PhoneScreen = 'home' | 'messages' | 'album' | 'story';

@@ -117,6 +117,19 @@ export class CheckpointRegistry {
           throw new Error(`${label} references unknown Checkpoint "${event.checkpointId}".`);
         }
         break;
+      case 'phone_story':
+        this.assertId(event.card.id, `${label} Phone Story card`);
+        this.assertNonEmpty(event.card.appLabel, `${label} Phone Story app label`);
+        this.assertNonEmpty(event.card.title, `${label} Phone Story title`);
+        this.assertNonEmpty(event.card.body, `${label} Phone Story body`);
+        this.assertNonEmpty(event.card.actionLabel, `${label} Phone Story action label`);
+        if (
+          event.card.subtitle !== undefined
+          && typeof event.card.subtitle !== 'string'
+        ) {
+          throw new Error(`${label} Phone Story subtitle must be a string when provided.`);
+        }
+        break;
       default: {
         const unsupported = event as { readonly type?: unknown };
         throw new Error(`${label} has unsupported type "${String(unsupported.type)}".`);

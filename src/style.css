@@ -527,6 +527,81 @@ body,
   font-size: 10px;
 }
 
+.phone-shell[data-phone-screen-name='story'] .phone-screen {
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(circle at 18% 10%, rgb(255 205 216 / 70%), transparent 34%),
+    radial-gradient(circle at 88% 88%, rgb(196 228 238 / 82%), transparent 36%),
+    linear-gradient(155deg, #fff8f4, #eef8fa);
+}
+
+.phone-story-card {
+  width: 100%;
+  padding: 28px 24px 24px;
+  border: 1px solid rgb(91 111 125 / 12%);
+  border-radius: 26px;
+  background: rgb(255 255 255 / 92%);
+  box-shadow: 0 18px 44px rgb(41 65 79 / 16%);
+  text-align: center;
+}
+
+.phone-story-app-label {
+  margin: 0 0 28px;
+  color: #bc6073;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.phone-story-title {
+  margin: 0;
+  color: #2b4655;
+  font-size: 30px;
+  line-height: 1.08;
+}
+
+.phone-story-subtitle {
+  margin: 10px 0 0;
+  color: #bd6375;
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.phone-story-body {
+  margin: 24px auto;
+  color: #546b78;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.phone-story-action {
+  width: 100%;
+  min-height: 50px;
+  border: 0;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #d96d83, #d68c68);
+  box-shadow: 0 10px 24px rgb(188 96 115 / 25%);
+  color: white;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.phone-story-action:hover,
+.phone-story-action:focus-visible {
+  outline: 3px solid rgb(217 109 131 / 24%);
+  transform: translateY(-1px);
+}
+
+.phone-story-action:disabled {
+  cursor: default;
+  opacity: 0.65;
+  transform: none;
+}
+
 .phone-home-indicator {
   width: 110px;
   height: 5px;

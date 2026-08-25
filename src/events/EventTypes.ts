@@ -1,6 +1,6 @@
 import type { Vector3Config } from '../config/gameConfig';
 import type { DialogueSequence } from '../dialogue/DialogueTypes';
-import type { PhoneObjective } from '../phone/PhoneTypes';
+import type { PhoneObjective, PhoneStoryCard } from '../phone/PhoneTypes';
 
 export interface DialogueEvent {
   readonly type: 'dialogue';
@@ -60,6 +60,11 @@ export interface SetCheckpointEvent {
   readonly checkpointId: string;
 }
 
+export interface PhoneStoryEvent {
+  readonly type: 'phone_story';
+  readonly card: PhoneStoryCard;
+}
+
 export type GameEvent =
   | DialogueEvent
   | MoveNpcEvent
@@ -71,7 +76,8 @@ export type GameEvent =
   | UnlockMessageEvent
   | UnlockPhotoEvent
   | ChangeSceneEvent
-  | SetCheckpointEvent;
+  | SetCheckpointEvent
+  | PhoneStoryEvent;
 
 export interface EventSequence {
   readonly id: string;

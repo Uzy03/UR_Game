@@ -3,6 +3,7 @@ import type {
   PhonePhotoDefinition,
   PhoneProgressSnapshot,
   PhoneScreen,
+  PhoneStoryCard,
   PhoneThreadDefinition,
 } from '../../phone/PhoneTypes';
 
@@ -53,9 +54,9 @@ export class PhoneUI {
     this.handlers = handlers;
   }
 
-  public show(): void {
+  public show(focusTarget?: HTMLElement): void {
     this.element.hidden = false;
-    this.closeButton.focus();
+    (focusTarget ?? this.closeButton).focus();
   }
 
   public hide(): void {
@@ -158,6 +159,33 @@ export class PhoneUI {
     this.screenElement.append(grid);
   }
 
+  public renderStoryCard(
+    card: PhoneStoryCard,
+    onAction: () => void,
+  ): HTMLButtonElement {
+    this.prepareScreen('story', card.appLabel);
+
+    const storyCard = this.createElement('article', 'phone-story-card');
+    storyCard.append(
+      this.createElement('p', 'phone-story-app-label', card.appLabel),
+      this.createElement('h2', 'phone-story-title', card.title),
+    );
+    if (card.subtitle !== undefined) {
+      storyCard.append(this.createElement('p', 'phone-story-subtitle', card.subtitle));
+    }
+    storyCard.append(this.createElement('p', 'phone-story-body', card.body));
+
+    const actionButton = this.createElement('button', 'phone-story-action', card.actionLabel);
+    actionButton.type = 'button';
+    actionButton.addEventListener('click', () => {
+      actionButton.disabled = true;
+      onAction();
+    }, { once: true });
+    storyCard.append(actionButton);
+    this.screenElement.append(storyCard);
+    return actionButton;
+  }
+
   public dispose(): void {
     this.backButton.removeEventListener('click', this.handleBack);
     this.closeButton.removeEventListener('click', this.handleClose);
@@ -168,8 +196,12 @@ export class PhoneUI {
   private prepareScreen(screen: PhoneScreen, title: string): void {
     this.clearScreen();
     this.titleElement.textContent = title;
-    this.backButton.disabled = screen === 'home';
-    this.backButton.setAttribute('aria-hidden', String(screen === 'home'));
+    const backHidden = screen === 'home' || screen === 'story';
+    const closeHidden = screen === 'story';
+    this.backButton.disabled = backHidden;
+    this.backButton.setAttribute('aria-hidden', String(backHidden));
+    this.closeButton.disabled = closeHidden;
+    this.closeButton.setAttribute('aria-hidden', String(closeHidden));
     this.shellElement.dataset.phoneScreenName = screen;
   }
 

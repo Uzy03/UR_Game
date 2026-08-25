@@ -4,7 +4,7 @@ import { InputAction } from '../input/InputAction';
 import type { InteractionSystem } from '../interaction/InteractionSystem';
 import type { NPCController } from '../npc/NPCController';
 import type { PlayerController } from '../player/PlayerController';
-import type { PhoneProgressActions } from '../phone/PhoneTypes';
+import type { PhoneProgressActions, PhoneStoryActions } from '../phone/PhoneTypes';
 import type { CheckpointActions } from '../save/CheckpointTypes';
 import type { SceneActions } from '../scene/SceneManager';
 import type { TaskResult } from '../task/Task';
@@ -36,6 +36,7 @@ interface EventRunnerDependencies {
   readonly npcs: ReadonlyMap<string, NPCController>;
   readonly tasks: ReadonlyMap<string, TaskEventBinding>;
   readonly phoneProgress: PhoneProgressActions;
+  readonly phoneStory: PhoneStoryActions;
   readonly scenes: SceneActions;
   readonly checkpoints: CheckpointActions;
 }
@@ -169,6 +170,9 @@ export class EventRunner {
       case 'change_scene':
       case 'set_checkpoint':
         // Synchronous service events complete during beginCurrentEvent().
+        break;
+      case 'phone_story':
+        // Story cards complete through their guarded UI callback.
         break;
     }
   }
@@ -336,6 +340,30 @@ export class EventRunner {
           () => this.dependencies.checkpoints.setCheckpoint(event.checkpointId),
         );
         break;
+      case 'phone_story': {
+        this.setGameplayEnabled(false);
+        const startedIndex = this.eventIndex;
+        let presented = false;
+        try {
+          presented = this.dependencies.phoneStory.presentStoryCard(event.card, () => {
+            if (
+              this.runnerState === 'running'
+              && this.eventIndex === startedIndex
+              && this.currentEventStarted
+            ) {
+              this.completeCurrentEvent();
+            }
+          });
+        } catch (error: unknown) {
+          const message = error instanceof Error ? error.message : String(error);
+          this.failCurrentEvent(message, event.type);
+          return;
+        }
+        if (!presented) {
+          this.failCurrentEvent('Phone Story presentation could not be started.', event.type);
+        }
+        break;
+      }
       default: {
         const unsupported = event as { readonly type?: unknown };
         this.failCurrentEvent(
@@ -475,6 +503,7 @@ export class EventRunner {
   }
 
   private clearUiAndTaskState(): void {
+    this.dependencies.phoneStory.cancelStoryPresentation();
     this.dependencies.taskManager.reset();
     this.dependencies.taskHud.hide();
     this.dependencies.resultOverlay.hide();

@@ -1,6 +1,6 @@
-# Anniversary Game — Phase 6
+# Anniversary Game — Phase 7
 
-交際1周年記念の短編3Dゲームに向けた、Webブラウザ用のゲーム基盤です。Phase 6ではPhase 5までの移動・インタラクション・NPC・会話・タスク・Phone・複数Sceneを維持しながら、安全な物語地点から再開できるCheckpoint Resumeを追加しています。
+交際1周年記念の短編3Dゲームに向けた、Webブラウザ用のゲーム基盤です。Phase 7ではPhase 6までの機能を組み合わせ、架空データだけで「Phone上の物語操作→Scene切替→NPC会話→持ち運びTask→思い出解放→Checkpoint」のPlayable Vertical Sliceを実装しています。
 
 ## 実行
 
@@ -19,11 +19,11 @@ npm run dev
 - `F`: 通常探索中にスマートフォンを開く／閉じる
 - `Escape`: スマートフォン内で戻る。Homeでは閉じる
 
-起動時のStart Menuで`New Game`を選ぶと、室内風の`demo-room`からデモイベントが始まり、会話後に庭風の`demo-garden`へ切り替わります。切り替え後も同じイベント列が新SceneのNPCとTaskを解決し、「3個のアイテムを緑のカウンターへ運ぶ」45秒のPlacementTaskへ進みます。安全地点へ到達するとCheckpoint IDが自動保存され、次回起動時に`Continue`を選べます。
+起動時のStart Menuで`New Game`を選ぶと、寝室風の`demo-bedroom`で架空のPhone Story Cardが始まります。2枚のカードを操作するとカフェ風の`demo-cafe`へ移動し、NPCとの短い会話後に「2個の飲み物をテーブルへ運ぶ」40秒のPlacementTaskへ進みます。成功すると架空Messageと自作placeholder PhotoをPhoneから確認でき、安全なCheckpoint IDが保存されます。
 
 `Continue`はPlayer座標やTask途中状態を復元せず、最後の安全なCheckpointが定義するScene・Phone進行・再開イベント列から再構築します。`Reset Progress`はGame SaveとPhone進行を初期化します。
 
-Phone表示中は移動とInteractionが停止します。`EventRunner`実行中はTimerやNPC移動を安全に保つためPhoneを開けません。
+通常Phone表示中は移動とInteractionが停止します。`EventRunner`実行中は通常Phoneを開けません。`phone_story` EventだけはEventRunner所有のStory Phoneを開き、カード上のHTMLボタンが押されるまで進行を待ちます。Story Phoneは`F`や`Escape`では閉じられません。
 
 ## ゲームループ
 
@@ -62,7 +62,7 @@ Phone表示中は移動とInteractionが停止します。`EventRunner`実行中
 - `TaskManager`: 実行中タスクと完了通知を管理
 - `PlacementTask`: アイテムIDとPlacePoint IDで設定できる配置成功条件
 - `CountdownTimer`: ゲームループのdeltaTimeで制限時間を管理
-- `EventRunner`: データで定義したイベントをゲームループ上で開始・待機・完了し、cancel/error cleanupも管理
+- `EventRunner`: データで定義したイベントをゲームループ上で開始・待機・完了し、Story Phoneを含むcancel/error cleanupも管理
 - `EventTypes`: 会話・Task・Phone・Scene切替・Checkpoint保存を表すDiscriminated Union
 - `TaskEventBinding`: Task開始前のゲーム世界リセットをEventRunnerから分離
 - `Phase2DemoController`: Phase 2の参考実装として残しているが、Phase 3の実行経路では使用しない
@@ -70,16 +70,16 @@ Phone表示中は移動とInteractionが停止します。`EventRunner`実行中
 - `PhoneContentRegistry`: Message / Photo / Threadの静的定義とID検証
 - `PhoneProgress`: 日付・目的・解放済みIDだけを管理し、変更時に保存
 - `PhoneProgressStore`: バージョン付きPhone進行データだけを`localStorage`へ保存・復元
-- `PhoneController`: Phone開閉、画面遷移、既存入力状態の保存・復元、`EventRunner`との排他
-- `PhoneUI`: Home / Messages / AlbumのDOM表示だけを担当
+- `PhoneController`: 通常Phoneの入力状態保存・復元、Story Phoneとの排他、Story Card完了通知
+- `PhoneUI`: Home / Messages / Album / Story CardのDOM表示だけを担当
 - `CheckpointRegistry`: Checkpoint IDからScene・Phone状態・再開Sequenceを解決し、起動時に参照を検証
 - `GameSaveStore`: `checkpointId`だけを持つGame Save v1の保存・検証・削除
 - `GameProgressController`: New Game / Continue / Resetと安全な復元順序を調停
 - `StartMenu`: 保存状況に応じたNew Game / Continue / ResetのDOM表示
 
-Scene定義とイベント内容は`src/content/demo/phase5Scenes.ts`と`src/content/demo/phase5DemoSequence.ts`、Checkpointは`src/content/demo/phase6Checkpoints.ts`、Phoneの架空コンテンツは`src/content/demo/phase4PhoneContent.ts`にあります。Scene切替は同期処理で、旧SceneのThree.js object・Rapier Body・Interaction登録を破棄してから新Sceneへbindingします。
+Phase 7のScene、Event Sequence、Story Card、Phone content、Checkpointは`src/content/demo/phase7*.ts`に分離しています。Engine側へmatching appや初対面固有のクラスは追加していません。旧Phase 4〜6のScene・Phone content・CheckpointもRegistryへ残しているため、既存のv1 Save IDは引き続き解決できます。Scene切替は同期処理で、旧SceneのThree.js object・Rapier Body・Interaction登録を破棄してから新Sceneへbindingします。
 
-`localStorage`ではGame Saveの`ur-game:save:v1`とPhone進行の`ur-game:phone-progress:v1`を分離しています。Game SaveはCheckpoint IDだけを保持します。Player/NPC/Item座標、Carry、Task、Timer、Dialogue行、EventRunner index、Rapier状態は保存しません。
+`localStorage`ではGame Saveの`ur-game:save:v1`とPhone進行の`ur-game:phone-progress:v1`を分離しています。Phase 7でも両schemaはv1のままです。Game SaveはCheckpoint IDだけを保持し、Story Card、Player/NPC/Item座標、Carry、Task、Timer、Dialogue行、EventRunner index、Rapier状態は保存しません。
 
 入力ソースやゲームループの境界を保ち、キーコードは`KeyboardInput`のみに閉じ込めています。アイテムは操作性を優先してDynamicRigidBodyにせず、床・保持・PlacePointへの配置状態を明示的に切り替えています。
 

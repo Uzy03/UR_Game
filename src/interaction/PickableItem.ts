@@ -13,7 +13,7 @@ import {
 } from 'three';
 import type { Interactable, InteractionContext } from './Interactable';
 
-export type PickableItemKind = 'tomato' | 'box' | 'plate';
+export type PickableItemKind = 'tomato' | 'box' | 'plate' | 'drink';
 type PickableItemState = 'world' | 'carried' | 'placed';
 
 interface PickableItemOptions {
@@ -27,6 +27,7 @@ const ITEM_FOOTPRINT_RADIUS: Record<PickableItemKind, number> = {
   tomato: 0.23,
   box: 0.3,
   plate: 0.32,
+  drink: 0.24,
 };
 
 export class PickableItem implements Interactable {
@@ -152,13 +153,25 @@ export class PickableItem implements Interactable {
       );
       box.position.y = 0.19;
       visual.add(box);
-    } else {
+    } else if (kind === 'plate') {
       const plate = new Mesh(
         new CylinderGeometry(0.3, 0.25, 0.075, 24),
         new MeshStandardMaterial({ color: 0xf5f1df, roughness: 0.55 }),
       );
       plate.position.y = 0.04;
       visual.add(plate);
+    } else {
+      const cup = new Mesh(
+        new CylinderGeometry(0.17, 0.14, 0.34, 18),
+        new MeshStandardMaterial({ color: 0xc97b58, roughness: 0.62 }),
+      );
+      cup.position.y = 0.17;
+      const lid = new Mesh(
+        new CylinderGeometry(0.19, 0.19, 0.045, 18),
+        new MeshStandardMaterial({ color: 0xf5ead9, roughness: 0.5 }),
+      );
+      lid.position.y = 0.36;
+      visual.add(cup, lid);
     }
 
     visual.traverse((object) => {
