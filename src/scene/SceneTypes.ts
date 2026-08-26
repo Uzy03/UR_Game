@@ -23,6 +23,7 @@ export interface ScenePlacementTaskDefinition {
   readonly attemptPlayerFacing: number;
   readonly preserveWorldOnFirstAttempt?: boolean;
   readonly preserveItemProcessingOnRetry?: boolean;
+  readonly preserveItemRuntimeOnRetry?: boolean;
 }
 
 export interface SceneReachTaskDefinition {
@@ -49,6 +50,23 @@ export interface SceneProcessingTaskDefinition {
   readonly attemptPlayerFacing: number;
 }
 
+export interface SceneAssemblyStationDefinition {
+  readonly id: string;
+  readonly position: Vector3Config;
+  readonly inputItemIds: readonly [string, string];
+  readonly outputItemId: string;
+  readonly combineDurationSeconds: number;
+}
+
+export interface SceneAssemblyTaskDefinition {
+  readonly id: string;
+  readonly label: string;
+  readonly stationIds: readonly string[];
+  readonly durationSeconds: number;
+  readonly attemptPlayerPosition: Vector3Config;
+  readonly attemptPlayerFacing: number;
+}
+
 export interface SceneDefinition {
   readonly id: string;
   readonly playerSpawn: ScenePlayerSpawnDefinition;
@@ -58,4 +76,6 @@ export interface SceneDefinition {
   readonly reachTasks?: readonly SceneReachTaskDefinition[];
   readonly processingStations?: readonly SceneProcessingStationDefinition[];
   readonly processingTasks?: readonly SceneProcessingTaskDefinition[];
+  readonly assemblyStations?: readonly SceneAssemblyStationDefinition[];
+  readonly assemblyTasks?: readonly SceneAssemblyTaskDefinition[];
 }

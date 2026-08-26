@@ -21,6 +21,7 @@ export interface StagePickableItemDefinition {
   readonly kind: PickableItemKind;
   readonly position: Vector3Config;
   readonly initialProcessingState?: ItemProcessingState;
+  readonly initialActive?: boolean;
 }
 
 export interface StagePlacePointDefinition {

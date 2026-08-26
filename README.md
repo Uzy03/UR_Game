@@ -1,6 +1,6 @@
-# Anniversary Game — Phase 9
+# Anniversary Game — Phase 10
 
-交際1周年記念の短編3Dゲームに向けた、Webブラウザ用のゲーム基盤です。Phase 9では既存の物語パイプラインへ、Itemを加工台へ置いて一定時間加工し、加工済みItemをそのまま運搬する`ProcessingStation`と`ProcessingTask`を追加しています。
+交際1周年記念の短編3Dゲームに向けた、Webブラウザ用のゲーム基盤です。Phase 10では2個のItemを組立台へ順不同で投入し、1個の完成Itemへ変換して運搬する`AssemblyStation`と`AssemblyTask`を追加しています。
 
 ## 実行
 
@@ -19,7 +19,7 @@ npm run dev
 - `F`: 通常探索中にスマートフォンを開く／閉じる
 - `Escape`: スマートフォン内で戻る。Homeでは閉じる
 
-起動時のStart Menuで`New Game`を選ぶと、架空の`demo-prep-room`から始まります。2個のItemを1台の緑色ProcessingStationへ順番に置き、`E`または`Space`で加工します。3D progress barが完了するとItemに緑色indicatorが付きます。両方を加工した後、同じItem instanceを右側テーブルのPlacePointへ運ぶと、架空Photoと安全なCheckpointが保存されます。
+起動時のStart Menuで`New Game`を選ぶと、架空の`demo-assembly-room`から始まります。2個のComponentを青色AssemblyStationへ順不同で置き、`E`または`Space`でCombineします。3D progress barが完了すると入力Itemが非表示になり、事前生成済みの青いBundle Itemが有効になります。その完成Itemを右側テーブルのPlacePointへ運ぶと、架空Photoと安全なCheckpointが保存されます。
 
 `Continue`はPlayer座標やTask途中状態を復元せず、最後の安全なCheckpointが定義するScene・Phone進行・再開イベント列から再構築します。`Reset Progress`はGame SaveとPhone進行を初期化します。
 
@@ -50,9 +50,10 @@ npm run dev
 - `PlayerController`: 抽象化された移動入力を物理移動と向きへ反映
 - `InteractionSystem`: プレイヤー前方の操作対象選択、Action入力、ハイライト、操作ヒント
 - `CarrySystem`: 1個だけの保持状態、安全な床ドロップ、現在Sceneへの再binding
-- `PickableItem`: 種類に依存しない持ち運び可能アイテム
+- `PickableItem`: 加工状態とactive状態を独立して持つ、種類に依存しない持ち運び可能アイテム
 - `PlacePoint`: 空き・配置済み状態と、台への配置・再取得
 - `ProcessingStation`: 1個のItemの配置、deltaTime加工、進捗表示、加工済みItemの再取得
+- `AssemblyStation`: 2個の入力Item、deltaTime組立、入力の無効化、完成Itemの有効化と再取得
 - `FollowCamera`: プレイヤーとは独立したスムーズ追従
 - `Stage`: Scene定義から表示物と静的コライダーを構築し、所有Resourceを破棄
 - `SceneContentRegistry`: Scene定義のID解決と静的検証
@@ -64,12 +65,14 @@ npm run dev
 - `PlacementTask`: アイテムIDとPlacePoint IDで設定できる配置成功条件
 - `ReachZoneTask`: Playerと目的地のXZ距離を判定し、時間制限なしの到着目標とScene-local Markerを管理
 - `ProcessingTask`: 対象Stationの更新、指定Itemの加工完了判定、制限時間を管理
+- `AssemblyTask`: 対象AssemblyStationの更新、Combine完了判定、制限時間を管理
 - `CountdownTimer`: ゲームループのdeltaTimeで制限時間を管理
 - `EventRunner`: データで定義したイベントをゲームループ上で開始・待機・完了し、Story Phoneを含むcancel/error cleanupも管理
 - `EventTypes`: 会話・Task・Phone・Scene切替・Checkpoint保存を表すDiscriminated Union
 - `TaskEventBinding`: Task開始前のゲーム世界準備をEventRunnerから分離
 - `ReachZoneTaskEventBinding`: 到着Task開始前の一時UI・Interaction選択解除を担当し、PlayerやCarryを巻き戻さない
 - `ProcessingTaskEventBinding`: Retry時にCarry・Station・Item・PlacePoint・Playerをraw開始状態へ戻す
+- `AssemblyTaskEventBinding`: Retry時に入力Itemをactive、完成Itemをinactiveへ戻し、StationとPlayerを初期化
 - `Phase2DemoController`: Phase 2の参考実装として残しているが、Phase 3の実行経路では使用しない
 - `DialogueUI` / `TaskHUD` / `ResultOverlay` / `SpeechBubble`: DOM表示だけを担当
 - `PhoneContentRegistry`: Message / Photo / Threadの静的定義とID検証
@@ -82,9 +85,9 @@ npm run dev
 - `GameProgressController`: New Game / Continue / Resetと安全な復元順序を調停
 - `StartMenu`: 保存状況に応じたNew Game / Continue / ResetのDOM表示
 
-Phase 9のScene、Event Sequence、Phone content、Checkpointは`src/content/demo/phase9*.ts`に分離しています。ProcessingTaskも既存の`task` Eventと`TaskManager`を利用するため、新しいEvent primitiveは追加していません。旧Phase 4〜8のScene・Phone content・CheckpointもRegistryへ残しているため、既存のv1 Save IDは引き続き解決できます。ProcessingStationはSceneRuntime所有の汎用Interactableとして登録され、Stageの既存破棄経路で3D resourceを解放します。
+Phase 10のScene、Event Sequence、Phone content、Checkpointは`src/content/demo/phase10*.ts`に分離しています。AssemblyTaskも既存の`task` Eventと`TaskManager`を利用するため、新しいEvent primitiveは追加していません。旧Phase 4〜9のScene・Phone content・CheckpointもRegistryへ残しているため、既存のv1 Save IDは引き続き解決できます。AssemblyStationはSceneRuntime所有の汎用Interactableとして登録され、Stageの既存破棄経路で3D resourceを解放します。
 
-`localStorage`ではGame Saveの`ur-game:save:v1`とPhone進行の`ur-game:phone-progress:v1`を分離しています。Phase 9でも両schemaはv1のままです。Game SaveはCheckpoint IDだけを保持し、Item加工状態、Station状態・Timer、Player/NPC/Item座標、Carry、Task、Dialogue行、EventRunner index、Rapier状態は保存しません。
+`localStorage`ではGame Saveの`ur-game:save:v1`とPhone進行の`ur-game:phone-progress:v1`を分離しています。Phase 10でも両schemaはv1のままです。Game SaveはCheckpoint IDだけを保持し、Itemのactive・加工状態、Station状態・Timer、Player/NPC/Item座標、Carry、Task、Dialogue行、EventRunner index、Rapier状態は保存しません。Placement Retry用のItem runtime stateはScene内メモリだけに保持し、localStorageへ保存しません。
 
 入力ソースやゲームループの境界を保ち、キーコードは`KeyboardInput`のみに閉じ込めています。アイテムは操作性を優先してDynamicRigidBodyにせず、床・保持・PlacePointへの配置状態を明示的に切り替えています。
 

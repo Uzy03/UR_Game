@@ -1,7 +1,10 @@
-import type { Vector3Like } from 'three';
+import type { Object3D, Vector3Like } from 'three';
 import type { CarrySystem } from '../interaction/CarrySystem';
 import type { InteractionSystem } from '../interaction/InteractionSystem';
-import type { PickableItem } from '../interaction/PickableItem';
+import type {
+  PickableItem,
+  PickableItemRuntimeState,
+} from '../interaction/PickableItem';
 import type { PlacePoint } from '../interaction/PlacePoint';
 import type { PlayerController } from '../player/PlayerController';
 import type { Task } from '../task/Task';
@@ -22,12 +25,15 @@ interface PlacementTaskEventBindingOptions {
   readonly speechBubble: SpeechBubble;
   readonly preserveWorldOnFirstAttempt?: boolean;
   readonly preserveItemProcessingOnRetry?: boolean;
+  readonly preserveItemRuntimeOnRetry?: boolean;
+  readonly worldRoot: Object3D;
   readonly resetBeforeItems?: () => void;
 }
 
 export class PlacementTaskEventBinding implements TaskEventBinding {
   public readonly task: Task;
   private hasPreparedAttempt = false;
+  private itemAttemptStates: ReadonlyMap<PickableItem, PickableItemRuntimeState> | null = null;
 
   public constructor(private readonly options: PlacementTaskEventBindingOptions) {
     this.task = options.task;
@@ -53,7 +59,29 @@ export class PlacementTaskEventBinding implements TaskEventBinding {
     );
     this.hasPreparedAttempt = true;
 
-    if (!preserveCurrentWorld) {
+    if (preserveCurrentWorld) {
+      this.captureItemAttemptStatesIfNeeded();
+    } else if (
+      this.options.preserveItemRuntimeOnRetry === true
+      && this.itemAttemptStates !== null
+    ) {
+      carry.releaseForPlacement();
+      this.options.resetBeforeItems?.();
+      for (const placePoint of placePoints) {
+        placePoint.reset();
+      }
+      for (const item of items) {
+        const state = this.itemAttemptStates.get(item);
+        if (state === undefined) {
+          throw new Error(`Placement retry state for Item "${item.id}" is missing.`);
+        }
+        item.restoreRuntimeState(state);
+        if (item.isActive && !item.isOnFloor()) {
+          item.releaseToWorld(this.options.worldRoot);
+        }
+      }
+      player.reset(playerStartPosition, playerStartFacing);
+    } else {
       if (this.options.preserveItemProcessingOnRetry === true) {
         carry.releaseForPlacement();
       } else {
@@ -71,8 +99,22 @@ export class PlacementTaskEventBinding implements TaskEventBinding {
         }
       }
       player.reset(playerStartPosition, playerStartFacing);
+      this.captureItemAttemptStatesIfNeeded();
     }
     resultOverlay.hide();
     speechBubble.hide();
+  }
+
+  private captureItemAttemptStatesIfNeeded(): void {
+    if (
+      this.options.preserveItemRuntimeOnRetry !== true
+      || this.itemAttemptStates !== null
+    ) {
+      return;
+    }
+
+    this.itemAttemptStates = new Map(
+      this.options.items.map((item) => [item, item.captureRuntimeState()] as const),
+    );
   }
 }

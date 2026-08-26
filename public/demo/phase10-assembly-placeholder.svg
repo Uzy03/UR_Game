@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 600" role="img" aria-labelledby="title desc">
+  <title id="title">Fictional assembly room memory</title>
+  <desc id="desc">Two colorful components become a blue bundle on a workshop table.</desc>
+  <rect width="960" height="600" fill="#e7e5ef"/>
+  <rect y="390" width="960" height="210" fill="#c8bdad"/>
+  <circle cx="150" cy="115" r="58" fill="#f0d786" opacity="0.85"/>
+  <rect x="130" y="350" width="700" height="48" rx="18" fill="#866951"/>
+  <rect x="180" y="398" width="42" height="142" rx="12" fill="#6c5544"/>
+  <rect x="738" y="398" width="42" height="142" rx="12" fill="#6c5544"/>
+  <rect x="240" y="266" width="130" height="96" rx="20" fill="#dfaa55"/>
+  <rect x="435" y="250" width="76" height="112" rx="28" fill="#c87958"/>
+  <rect x="606" y="252" width="150" height="110" rx="22" fill="#7fa6c9"/>
+  <rect x="667" y="244" width="28" height="126" rx="8" fill="#f1cf72"/>
+  <path d="M400 305h-22m156 0h32" stroke="#56627d" stroke-width="14" stroke-linecap="round"/>
+  <path d="m556 284 28 21-28 21" fill="none" stroke="#56627d" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="480" y="92" text-anchor="middle" font-family="system-ui, sans-serif" font-size="44" font-weight="700" fill="#4b5368">DEMO ASSEMBLY</text>
+  <text x="480" y="150" text-anchor="middle" font-family="system-ui, sans-serif" font-size="24" fill="#626b80">A fictional preparation-room memory</text>
+</svg>

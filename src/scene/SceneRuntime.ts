@@ -1,9 +1,11 @@
 import { Group } from 'three';
+import { AssemblyTaskEventBinding } from '../events/AssemblyTaskEventBinding';
 import { PlacementTaskEventBinding } from '../events/PlacementTaskEventBinding';
 import { ProcessingTaskEventBinding } from '../events/ProcessingTaskEventBinding';
 import { ReachZoneTaskEventBinding } from '../events/ReachZoneTaskEventBinding';
 import type { TaskEventBinding } from '../events/TaskEventBinding';
 import type { CarrySystem } from '../interaction/CarrySystem';
+import { AssemblyStation } from '../interaction/AssemblyStation';
 import type { Interactable } from '../interaction/Interactable';
 import type { InteractionSystem } from '../interaction/InteractionSystem';
 import { ProcessingStation } from '../interaction/ProcessingStation';
@@ -12,6 +14,7 @@ import type { PhysicsWorld } from '../physics/PhysicsWorld';
 import type { PlayerController } from '../player/PlayerController';
 import { Stage } from '../stage/Stage';
 import { CountdownTimer } from '../task/CountdownTimer';
+import { AssemblyTask } from '../task/AssemblyTask';
 import { PlacementTask } from '../task/PlacementTask';
 import { ProcessingTask } from '../task/ProcessingTask';
 import { ReachZoneTask } from '../task/ReachZoneTask';
@@ -106,6 +109,35 @@ export class SceneRuntime {
         })
       );
 
+      const assemblyStations = (definition.assemblyStations ?? []).map((stationDefinition) => {
+        const [inputAId, inputBId] = stationDefinition.inputItemIds;
+        const inputA = activeStage.getPickableItems([inputAId])[0];
+        const inputB = activeStage.getPickableItems([inputBId])[0];
+        const outputItem = activeStage.getPickableItems([stationDefinition.outputItemId])[0];
+        if (inputA === undefined || inputB === undefined || outputItem === undefined) {
+          throw new Error(`AssemblyStation "${stationDefinition.id}" Item resolution failed.`);
+        }
+        return new AssemblyStation({
+          id: stationDefinition.id,
+          position: stationDefinition.position,
+          inputItems: [inputA, inputB],
+          outputItem,
+          combineDurationSeconds: stationDefinition.combineDurationSeconds,
+          parent: activeStage.object,
+        });
+      });
+      interactables.push(...assemblyStations);
+
+      const getAssemblyStations = (ids: readonly string[]): readonly AssemblyStation[] => (
+        ids.map((id) => {
+          const station = assemblyStations.find((candidate) => candidate.id === id);
+          if (station === undefined) {
+            throw new Error(`AssemblyStation "${id}" was not found in the Scene.`);
+          }
+          return station;
+        })
+      );
+
       const taskBindings: TaskEventBinding[] = definition.placementTasks.map((taskDefinition) => {
         const task = new PlacementTask(new CountdownTimer(), {
           id: taskDefinition.id,
@@ -127,8 +159,13 @@ export class SceneRuntime {
           speechBubble: dependencies.speechBubble,
           preserveWorldOnFirstAttempt: taskDefinition.preserveWorldOnFirstAttempt,
           preserveItemProcessingOnRetry: taskDefinition.preserveItemProcessingOnRetry,
+          preserveItemRuntimeOnRetry: taskDefinition.preserveItemRuntimeOnRetry,
+          worldRoot: activeStage.object,
           resetBeforeItems: () => {
             for (const station of processingStations) {
+              station.reset();
+            }
+            for (const station of assemblyStations) {
               station.reset();
             }
           },
@@ -168,6 +205,29 @@ export class SceneRuntime {
           items: activeStage.pickableItems,
           placePoints: activeStage.placePoints,
           stations: processingStations,
+          player: dependencies.player,
+          playerStartPosition: taskDefinition.attemptPlayerPosition,
+          playerStartFacing: taskDefinition.attemptPlayerFacing,
+          resultOverlay: dependencies.resultOverlay,
+          speechBubble: dependencies.speechBubble,
+        }));
+      }
+
+      for (const taskDefinition of definition.assemblyTasks ?? []) {
+        const taskStations = getAssemblyStations(taskDefinition.stationIds);
+        const task = new AssemblyTask(new CountdownTimer(), {
+          id: taskDefinition.id,
+          label: taskDefinition.label,
+          stations: taskStations,
+          durationSeconds: taskDefinition.durationSeconds,
+        });
+        taskBindings.push(new AssemblyTaskEventBinding({
+          task,
+          carry: dependencies.carry,
+          interaction: dependencies.interaction,
+          items: activeStage.pickableItems,
+          placePoints: activeStage.placePoints,
+          stations: assemblyStations,
           player: dependencies.player,
           playerStartPosition: taskDefinition.attemptPlayerPosition,
           playerStartFacing: taskDefinition.attemptPlayerFacing,

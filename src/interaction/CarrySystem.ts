@@ -46,6 +46,7 @@ export class CarrySystem {
       this.carriedItem !== null
       || this.sceneBinding === null
       || !this.sceneBinding.allItems.includes(item)
+      || !item.isActive
     ) {
       return false;
     }

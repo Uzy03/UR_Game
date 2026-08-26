@@ -43,6 +43,7 @@ export class Stage {
         position: item.position,
         parent: this.object,
         initialProcessingState: item.initialProcessingState,
+        initialActive: item.initialActive,
       }));
       this.placePoints = options.placePoints.map((placePoint) => new PlacePoint({
         id: placePoint.id,

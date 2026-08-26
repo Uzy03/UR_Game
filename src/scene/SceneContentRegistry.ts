@@ -39,6 +39,9 @@ export class SceneContentRegistry {
     }
 
     const itemIds = new Set(definition.stage.items.map((item) => item.id));
+    const itemsById = new Map(
+      definition.stage.items.map((item) => [item.id, item] as const),
+    );
     const placePointIds = new Set(definition.stage.placePoints.map((point) => point.id));
     const stationIds = new Set<string>();
     const stationsById = new Map(
@@ -74,6 +77,68 @@ export class SceneContentRegistry {
       }
     }
 
+    const assemblyStationIds = new Set<string>();
+    const assemblyOutputItemIds = new Set<string>();
+    const assemblyStationsById = new Map(
+      (definition.assemblyStations ?? []).map((station) => [station.id, station] as const),
+    );
+    for (const station of definition.assemblyStations ?? []) {
+      this.assertUniqueId(station.id, assemblyStationIds, `Scene "${definition.id}" Assembly Station`);
+      this.assertVector(
+        station.position,
+        `Scene "${definition.id}" Assembly Station "${station.id}" position`,
+      );
+      this.assertPositive(
+        station.combineDurationSeconds,
+        `Scene "${definition.id}" Assembly Station "${station.id}" duration`,
+      );
+      if (!Array.isArray(station.inputItemIds) || station.inputItemIds.length !== 2) {
+        throw new Error(
+          `Scene "${definition.id}" Assembly Station "${station.id}" must have exactly two input Items.`,
+        );
+      }
+      const [inputAId, inputBId] = station.inputItemIds;
+      if (inputAId === inputBId) {
+        throw new Error(
+          `Scene "${definition.id}" Assembly Station "${station.id}" must use two different input Items.`,
+        );
+      }
+      for (const inputId of station.inputItemIds) {
+        const inputItem = itemsById.get(inputId);
+        if (inputItem === undefined) {
+          throw new Error(
+            `Scene "${definition.id}" Assembly Station "${station.id}" references unknown input Item "${inputId}".`,
+          );
+        }
+        if (inputItem.initialActive === false) {
+          throw new Error(
+            `Scene "${definition.id}" Assembly Station "${station.id}" input Item "${inputId}" must start active.`,
+          );
+        }
+      }
+      const outputItem = itemsById.get(station.outputItemId);
+      if (outputItem === undefined) {
+        throw new Error(
+          `Scene "${definition.id}" Assembly Station "${station.id}" references unknown output Item "${station.outputItemId}".`,
+        );
+      }
+      if (station.inputItemIds.includes(station.outputItemId)) {
+        throw new Error(
+          `Scene "${definition.id}" Assembly Station "${station.id}" output must differ from its inputs.`,
+        );
+      }
+      if (outputItem.initialActive !== false) {
+        throw new Error(
+          `Scene "${definition.id}" Assembly Station "${station.id}" output Item "${station.outputItemId}" must start inactive.`,
+        );
+      }
+      this.assertUniqueId(
+        station.outputItemId,
+        assemblyOutputItemIds,
+        `Scene "${definition.id}" Assembly output Item`,
+      );
+    }
+
     const taskIds = new Set<string>();
     for (const task of definition.placementTasks) {
       this.assertUniqueId(task.id, taskIds, `Scene "${definition.id}" Task`);
@@ -99,6 +164,10 @@ export class SceneContentRegistry {
       this.assertOptionalBoolean(
         task.preserveItemProcessingOnRetry,
         `Scene "${definition.id}" Task "${task.id}" preserveItemProcessingOnRetry`,
+      );
+      this.assertOptionalBoolean(
+        task.preserveItemRuntimeOnRetry,
+        `Scene "${definition.id}" Task "${task.id}" preserveItemRuntimeOnRetry`,
       );
 
       for (const itemId of task.requiredItemIds) {
@@ -194,6 +263,41 @@ export class SceneContentRegistry {
         }
       }
     }
+
+    for (const task of definition.assemblyTasks ?? []) {
+      this.assertUniqueId(task.id, taskIds, `Scene "${definition.id}" Task`);
+      if (task.label.trim().length === 0) {
+        throw new Error(`Scene "${definition.id}" Task "${task.id}" has an empty label.`);
+      }
+      this.assertPositive(
+        task.durationSeconds,
+        `Scene "${definition.id}" Task "${task.id}" duration`,
+      );
+      this.assertVector(
+        task.attemptPlayerPosition,
+        `Scene "${definition.id}" Task "${task.id}" attempt player position`,
+      );
+      this.assertFinite(
+        task.attemptPlayerFacing,
+        `Scene "${definition.id}" Task "${task.id}" attempt player facing`,
+      );
+      if (task.stationIds.length === 0) {
+        throw new Error(`Scene "${definition.id}" Task "${task.id}" references no Stations.`);
+      }
+      const referencedStationIds = new Set<string>();
+      for (const stationId of task.stationIds) {
+        this.assertUniqueId(
+          stationId,
+          referencedStationIds,
+          `Scene "${definition.id}" Task "${task.id}" Assembly Station`,
+        );
+        if (!assemblyStationsById.has(stationId)) {
+          throw new Error(
+            `Scene "${definition.id}" Task "${task.id}" references unknown Assembly Station "${stationId}".`,
+          );
+        }
+      }
+    }
   }
 
   private validateStage(sceneId: string, stage: StageDefinition): void {
@@ -224,6 +328,10 @@ export class SceneContentRegistry {
           `Scene "${sceneId}" Item "${item.id}" has an invalid initial processing state.`,
         );
       }
+      this.assertOptionalBoolean(
+        item.initialActive,
+        `Scene "${sceneId}" Item "${item.id}" initialActive`,
+      );
     }
 
     const placePointIds = new Set<string>();
