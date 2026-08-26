@@ -40,6 +40,40 @@ export class SceneContentRegistry {
 
     const itemIds = new Set(definition.stage.items.map((item) => item.id));
     const placePointIds = new Set(definition.stage.placePoints.map((point) => point.id));
+    const stationIds = new Set<string>();
+    const stationsById = new Map(
+      (definition.processingStations ?? []).map((station) => [station.id, station] as const),
+    );
+    for (const station of definition.processingStations ?? []) {
+      this.assertUniqueId(station.id, stationIds, `Scene "${definition.id}" Processing Station`);
+      this.assertVector(
+        station.position,
+        `Scene "${definition.id}" Processing Station "${station.id}" position`,
+      );
+      this.assertPositive(
+        station.processingDurationSeconds,
+        `Scene "${definition.id}" Processing Station "${station.id}" duration`,
+      );
+      if (station.acceptedItemIds.length === 0) {
+        throw new Error(
+          `Scene "${definition.id}" Processing Station "${station.id}" must accept at least one Item.`,
+        );
+      }
+      const acceptedItemIds = new Set<string>();
+      for (const itemId of station.acceptedItemIds) {
+        this.assertUniqueId(
+          itemId,
+          acceptedItemIds,
+          `Scene "${definition.id}" Processing Station "${station.id}" accepted Item`,
+        );
+        if (!itemIds.has(itemId)) {
+          throw new Error(
+            `Scene "${definition.id}" Processing Station "${station.id}" references unknown Item "${itemId}".`,
+          );
+        }
+      }
+    }
+
     const taskIds = new Set<string>();
     for (const task of definition.placementTasks) {
       this.assertUniqueId(task.id, taskIds, `Scene "${definition.id}" Task`);
@@ -57,6 +91,14 @@ export class SceneContentRegistry {
       this.assertFinite(
         task.attemptPlayerFacing,
         `Scene "${definition.id}" Task "${task.id}" attempt player facing`,
+      );
+      this.assertOptionalBoolean(
+        task.preserveWorldOnFirstAttempt,
+        `Scene "${definition.id}" Task "${task.id}" preserveWorldOnFirstAttempt`,
+      );
+      this.assertOptionalBoolean(
+        task.preserveItemProcessingOnRetry,
+        `Scene "${definition.id}" Task "${task.id}" preserveItemProcessingOnRetry`,
       );
 
       for (const itemId of task.requiredItemIds) {
@@ -86,6 +128,72 @@ export class SceneContentRegistry {
       );
       this.assertPositive(task.radius, `Scene "${definition.id}" Task "${task.id}" radius`);
     }
+
+    for (const task of definition.processingTasks ?? []) {
+      this.assertUniqueId(task.id, taskIds, `Scene "${definition.id}" Task`);
+      if (task.label.trim().length === 0) {
+        throw new Error(`Scene "${definition.id}" Task "${task.id}" has an empty label.`);
+      }
+      this.assertPositive(
+        task.durationSeconds,
+        `Scene "${definition.id}" Task "${task.id}" duration`,
+      );
+      this.assertVector(
+        task.attemptPlayerPosition,
+        `Scene "${definition.id}" Task "${task.id}" attempt player position`,
+      );
+      this.assertFinite(
+        task.attemptPlayerFacing,
+        `Scene "${definition.id}" Task "${task.id}" attempt player facing`,
+      );
+      if (task.requiredItemIds.length === 0) {
+        throw new Error(`Scene "${definition.id}" Task "${task.id}" requires no Items.`);
+      }
+      if (task.stationIds.length === 0) {
+        throw new Error(`Scene "${definition.id}" Task "${task.id}" references no Stations.`);
+      }
+
+      const requiredItemIds = new Set<string>();
+      for (const itemId of task.requiredItemIds) {
+        this.assertUniqueId(
+          itemId,
+          requiredItemIds,
+          `Scene "${definition.id}" Task "${task.id}" required Item`,
+        );
+        if (!itemIds.has(itemId)) {
+          throw new Error(
+            `Scene "${definition.id}" Task "${task.id}" references unknown Item "${itemId}".`,
+          );
+        }
+      }
+
+      const referencedStationIds = new Set<string>();
+      const referencedStations = task.stationIds.map((stationId) => {
+        this.assertUniqueId(
+          stationId,
+          referencedStationIds,
+          `Scene "${definition.id}" Task "${task.id}" Station`,
+        );
+        const station = stationsById.get(stationId);
+        if (station === undefined) {
+          throw new Error(
+            `Scene "${definition.id}" Task "${task.id}" references unknown Processing Station "${stationId}".`,
+          );
+        }
+        return station;
+      });
+
+      for (const itemId of requiredItemIds) {
+        const accepted = referencedStations.some(
+          (station) => station.acceptedItemIds.includes(itemId),
+        );
+        if (!accepted) {
+          throw new Error(
+            `Scene "${definition.id}" Task "${task.id}" has no Station that accepts Item "${itemId}".`,
+          );
+        }
+      }
+    }
   }
 
   private validateStage(sceneId: string, stage: StageDefinition): void {
@@ -107,6 +215,15 @@ export class SceneContentRegistry {
     for (const item of stage.items) {
       this.assertUniqueId(item.id, itemIds, `Scene "${sceneId}" Item`);
       this.assertVector(item.position, `Scene "${sceneId}" Item "${item.id}" position`);
+      if (
+        item.initialProcessingState !== undefined
+        && item.initialProcessingState !== 'raw'
+        && item.initialProcessingState !== 'processed'
+      ) {
+        throw new Error(
+          `Scene "${sceneId}" Item "${item.id}" has an invalid initial processing state.`,
+        );
+      }
     }
 
     const placePointIds = new Set<string>();
@@ -163,6 +280,12 @@ export class SceneContentRegistry {
   private assertColor(value: number, label: string): void {
     if (!Number.isInteger(value) || value < 0 || value > 0xffffff) {
       throw new Error(`${label} must be an integer RGB color.`);
+    }
+  }
+
+  private assertOptionalBoolean(value: boolean | undefined, label: string): void {
+    if (value !== undefined && typeof value !== 'boolean') {
+      throw new Error(`${label} must be a boolean when provided.`);
     }
   }
 }

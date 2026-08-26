@@ -3,33 +3,31 @@ import type { CarrySystem } from '../interaction/CarrySystem';
 import type { InteractionSystem } from '../interaction/InteractionSystem';
 import type { PickableItem } from '../interaction/PickableItem';
 import type { PlacePoint } from '../interaction/PlacePoint';
+import type { ProcessingStation } from '../interaction/ProcessingStation';
 import type { PlayerController } from '../player/PlayerController';
 import type { Task } from '../task/Task';
 import type { ResultOverlay } from '../ui/ResultOverlay';
 import type { SpeechBubble } from '../ui/SpeechBubble';
 import type { TaskEventBinding } from './TaskEventBinding';
 
-interface PlacementTaskEventBindingOptions {
+interface ProcessingTaskEventBindingOptions {
   readonly task: Task;
   readonly carry: CarrySystem;
   readonly interaction: InteractionSystem;
   readonly items: readonly PickableItem[];
   readonly placePoints: readonly PlacePoint[];
+  readonly stations: readonly ProcessingStation[];
   readonly player: PlayerController;
   readonly playerStartPosition: Readonly<Vector3Like>;
   readonly playerStartFacing: number;
   readonly resultOverlay: ResultOverlay;
   readonly speechBubble: SpeechBubble;
-  readonly preserveWorldOnFirstAttempt?: boolean;
-  readonly preserveItemProcessingOnRetry?: boolean;
-  readonly resetBeforeItems?: () => void;
 }
 
-export class PlacementTaskEventBinding implements TaskEventBinding {
+export class ProcessingTaskEventBinding implements TaskEventBinding {
   public readonly task: Task;
-  private hasPreparedAttempt = false;
 
-  public constructor(private readonly options: PlacementTaskEventBindingOptions) {
+  public constructor(private readonly options: ProcessingTaskEventBindingOptions) {
     this.task = options.task;
   }
 
@@ -44,34 +42,21 @@ export class PlacementTaskEventBinding implements TaskEventBinding {
       playerStartPosition,
       resultOverlay,
       speechBubble,
+      stations,
     } = this.options;
 
     interaction.reset();
-    const preserveCurrentWorld = (
-      this.options.preserveWorldOnFirstAttempt === true
-      && !this.hasPreparedAttempt
-    );
-    this.hasPreparedAttempt = true;
-
-    if (!preserveCurrentWorld) {
-      if (this.options.preserveItemProcessingOnRetry === true) {
-        carry.releaseForPlacement();
-      } else {
-        carry.reset();
-      }
-      this.options.resetBeforeItems?.();
-      for (const placePoint of placePoints) {
-        placePoint.reset();
-      }
-      for (const item of items) {
-        if (this.options.preserveItemProcessingOnRetry === true) {
-          item.resetTransform();
-        } else {
-          item.reset();
-        }
-      }
-      player.reset(playerStartPosition, playerStartFacing);
+    carry.reset();
+    for (const station of stations) {
+      station.reset();
     }
+    for (const placePoint of placePoints) {
+      placePoint.reset();
+    }
+    for (const item of items) {
+      item.reset();
+    }
+    player.reset(playerStartPosition, playerStartFacing);
     resultOverlay.hide();
     speechBubble.hide();
   }

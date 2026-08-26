@@ -14,6 +14,7 @@ import {
 import type { Interactable, InteractionContext } from './Interactable';
 
 export type PickableItemKind = 'tomato' | 'box' | 'plate' | 'drink';
+export type ItemProcessingState = 'raw' | 'processed';
 type PickableItemState = 'world' | 'carried' | 'placed';
 
 interface PickableItemOptions {
@@ -21,6 +22,7 @@ interface PickableItemOptions {
   readonly kind: PickableItemKind;
   readonly position: Readonly<Vector3Like>;
   readonly parent: Object3D;
+  readonly initialProcessingState?: ItemProcessingState;
 }
 
 const ITEM_FOOTPRINT_RADIUS: Record<PickableItemKind, number> = {
@@ -35,15 +37,19 @@ export class PickableItem implements Interactable {
   public readonly object = new Group();
   public readonly footprintRadius: number;
   private readonly highlight: Mesh;
+  private readonly processedIndicator: Mesh;
   private readonly initialParent: Object3D;
   private readonly initialPosition = new Vector3();
   private readonly initialRotation = new Vector3();
+  private readonly initialProcessingState: ItemProcessingState;
   private state: PickableItemState = 'world';
+  private itemProcessingState: ItemProcessingState = 'raw';
 
   public constructor(options: PickableItemOptions) {
     this.id = options.id;
     this.initialParent = options.parent;
     this.initialPosition.copy(options.position);
+    this.initialProcessingState = options.initialProcessingState ?? 'raw';
     this.object.name = `PickableItem:${options.id}`;
     this.footprintRadius = ITEM_FOOTPRINT_RADIUS[options.kind];
     this.object.add(this.createVisual(options.kind));
@@ -57,6 +63,24 @@ export class PickableItem implements Interactable {
     this.highlight.position.y = 0.012;
     this.highlight.visible = false;
     this.object.add(this.highlight);
+
+    this.processedIndicator = new Mesh(
+      new SphereGeometry(0.095, 14, 10),
+      new MeshStandardMaterial({
+        color: 0x68d391,
+        emissive: 0x184f2d,
+        roughness: 0.45,
+      }),
+    );
+    this.processedIndicator.name = 'ProcessedIndicator';
+    this.processedIndicator.position.set(0.2, 0.56, 0);
+    this.processedIndicator.visible = false;
+    this.processedIndicator.castShadow = true;
+    this.object.add(this.processedIndicator);
+
+    if (this.initialProcessingState === 'processed') {
+      this.markProcessed();
+    }
 
     options.parent.add(this.object);
     this.object.position.copy(options.position);
@@ -93,6 +117,19 @@ export class PickableItem implements Interactable {
     return this.state === 'world';
   }
 
+  public get processingState(): ItemProcessingState {
+    return this.itemProcessingState;
+  }
+
+  public get isProcessed(): boolean {
+    return this.itemProcessingState === 'processed';
+  }
+
+  public markProcessed(): void {
+    this.itemProcessingState = 'processed';
+    this.processedIndicator.visible = true;
+  }
+
   public carryBy(anchor: Object3D): void {
     this.state = 'carried';
     this.setHighlighted(false);
@@ -118,6 +155,11 @@ export class PickableItem implements Interactable {
   }
 
   public reset(): void {
+    this.resetTransform();
+    this.resetProcessingState();
+  }
+
+  public resetTransform(): void {
     this.state = 'world';
     this.setHighlighted(false);
     this.initialParent.add(this.object);
@@ -127,6 +169,11 @@ export class PickableItem implements Interactable {
       this.initialRotation.y,
       this.initialRotation.z,
     );
+  }
+
+  public resetProcessingState(): void {
+    this.itemProcessingState = this.initialProcessingState;
+    this.processedIndicator.visible = this.initialProcessingState === 'processed';
   }
 
   private createVisual(kind: PickableItemKind): Group {

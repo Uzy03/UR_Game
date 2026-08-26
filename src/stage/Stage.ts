@@ -42,6 +42,7 @@ export class Stage {
         kind: item.kind,
         position: item.position,
         parent: this.object,
+        initialProcessingState: item.initialProcessingState,
       }));
       this.placePoints = options.placePoints.map((placePoint) => new PlacePoint({
         id: placePoint.id,
@@ -121,6 +122,16 @@ export class Stage {
         throw new Error(`PlacePoint "${id}" was not found in the stage.`);
       }
       return placePoint;
+    });
+  }
+
+  public getPickableItems(ids: readonly string[]): readonly PickableItem[] {
+    return ids.map((id) => {
+      const item = this.pickableItems.find((candidate) => candidate.id === id);
+      if (item === undefined) {
+        throw new Error(`PickableItem "${id}" was not found in the stage.`);
+      }
+      return item;
     });
   }
 

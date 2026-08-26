@@ -21,6 +21,8 @@ export interface ScenePlacementTaskDefinition {
   readonly targetPlacePointIds: readonly string[];
   readonly attemptPlayerPosition: Vector3Config;
   readonly attemptPlayerFacing: number;
+  readonly preserveWorldOnFirstAttempt?: boolean;
+  readonly preserveItemProcessingOnRetry?: boolean;
 }
 
 export interface SceneReachTaskDefinition {
@@ -30,6 +32,23 @@ export interface SceneReachTaskDefinition {
   readonly radius: number;
 }
 
+export interface SceneProcessingStationDefinition {
+  readonly id: string;
+  readonly position: Vector3Config;
+  readonly processingDurationSeconds: number;
+  readonly acceptedItemIds: readonly string[];
+}
+
+export interface SceneProcessingTaskDefinition {
+  readonly id: string;
+  readonly label: string;
+  readonly requiredItemIds: readonly string[];
+  readonly stationIds: readonly string[];
+  readonly durationSeconds: number;
+  readonly attemptPlayerPosition: Vector3Config;
+  readonly attemptPlayerFacing: number;
+}
+
 export interface SceneDefinition {
   readonly id: string;
   readonly playerSpawn: ScenePlayerSpawnDefinition;
@@ -37,4 +56,6 @@ export interface SceneDefinition {
   readonly npcs: readonly SceneNpcDefinition[];
   readonly placementTasks: readonly ScenePlacementTaskDefinition[];
   readonly reachTasks?: readonly SceneReachTaskDefinition[];
+  readonly processingStations?: readonly SceneProcessingStationDefinition[];
+  readonly processingTasks?: readonly SceneProcessingTaskDefinition[];
 }

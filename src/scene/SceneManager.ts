@@ -80,6 +80,9 @@ export class SceneManager implements SceneActions {
       for (const placePoint of installedRuntime.stage.placePoints) {
         this.dependencies.interaction.register(placePoint);
       }
+      for (const interactable of installedRuntime.interactables) {
+        this.dependencies.interaction.register(interactable);
+      }
       for (const npc of installedRuntime.npcs) {
         this.dependencies.interaction.register(npc);
         this.dependencies.npcs.set(npc.id, npc);

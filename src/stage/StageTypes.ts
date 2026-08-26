@@ -1,4 +1,7 @@
-import type { PickableItemKind } from '../interaction/PickableItem';
+import type {
+  ItemProcessingState,
+  PickableItemKind,
+} from '../interaction/PickableItem';
 
 export interface Vector3Config {
   readonly x: number;
@@ -17,6 +20,7 @@ export interface StagePickableItemDefinition {
   readonly id: string;
   readonly kind: PickableItemKind;
   readonly position: Vector3Config;
+  readonly initialProcessingState?: ItemProcessingState;
 }
 
 export interface StagePlacePointDefinition {
