@@ -20,13 +20,7 @@ import {
   PHASE5_HELPER_NPC_ID,
   PHASE5_INITIAL_SCENE_ID,
 } from '../content/demo/phase5Scenes';
-import {
-  PHASE10_ASSEMBLY_SCENE_ID,
-  PHASE10_INITIAL_CHECKPOINT_ID,
-} from '../content/demo/phase10Ids';
-import { PHASE10_CHECKPOINTS } from '../content/demo/phase10Checkpoints';
-import { PHASE10_PHONE_CONTENT } from '../content/demo/phase10PhoneContent';
-import { PHASE10_SCENES } from '../content/demo/phase10Scenes';
+import { PHASE11_CONTENT } from '../content/campaign/campaignContent';
 import { DialogueManager } from '../dialogue/DialogueManager';
 import { EventRunner } from '../events/EventRunner';
 import type { TaskEventBinding } from '../events/TaskEventBinding';
@@ -106,10 +100,11 @@ export class Game {
     );
 
     this.input = new InputManager([new KeyboardInput(window)]);
-    const sceneContent = new SceneContentRegistry(PHASE10_SCENES);
-    const initialScene = sceneContent.getScene(PHASE10_ASSEMBLY_SCENE_ID);
+    const content = PHASE11_CONTENT;
+    const sceneContent = new SceneContentRegistry(content.scenes);
+    const initialScene = sceneContent.getScene(content.initialSceneId);
     if (initialScene === undefined) {
-      throw new Error(`Initial Scene "${PHASE10_ASSEMBLY_SCENE_ID}" is not registered.`);
+      throw new Error(`Initial Scene "${content.initialSceneId}" is not registered.`);
     }
 
     const character = this.physics.createKinematicCharacter({
@@ -140,10 +135,10 @@ export class Game {
     const taskHud = new TaskHUD(requireElement('task-hud'));
     const resultOverlay = new ResultOverlay(requireElement('result-overlay'));
     this.speechBubble = new SpeechBubble(requireElement('speech-bubble'), container);
-    const phoneContent = new PhoneContentRegistry(PHASE10_PHONE_CONTENT);
+    const phoneContent = new PhoneContentRegistry(content.phoneContent);
     const phoneProgress = new PhoneProgress(phoneContent, new PhoneProgressStore());
     const checkpointRegistry = new CheckpointRegistry(
-      PHASE10_CHECKPOINTS,
+      content.checkpoints,
       sceneContent,
       phoneContent,
     );
@@ -232,7 +227,7 @@ export class Game {
       }),
     });
     sceneManagerTarget = this.sceneManager;
-    this.sceneManager.loadScene(PHASE10_ASSEMBLY_SCENE_ID);
+    this.sceneManager.loadScene(content.initialSceneId);
 
     this.phone = new PhoneController({
       input: this.input,
@@ -250,7 +245,7 @@ export class Game {
     phoneTarget = this.phone;
 
     this.progress = new GameProgressController({
-      initialCheckpointId: PHASE10_INITIAL_CHECKPOINT_ID,
+      initialCheckpointId: content.initialCheckpointId,
       checkpoints: checkpointRegistry,
       saveStore: new GameSaveStore(),
       sceneManager: this.sceneManager,

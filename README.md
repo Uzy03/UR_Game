@@ -1,6 +1,6 @@
-# Anniversary Game — Phase 10
+# Anniversary Game — Phase 11
 
-交際1周年記念の短編3Dゲームに向けた、Webブラウザ用のゲーム基盤です。Phase 10では2個のItemを組立台へ順不同で投入し、1個の完成Itemへ変換して運搬する`AssemblyStation`と`AssemblyTask`を追加しています。
+交際1周年記念の短編3Dゲームに向けた、Webブラウザ用のゲーム基盤です。Phase 11ではPhase 0〜10の機能を新しいengine primitiveなしで接続し、架空データだけの一本道Campaignとして統合しています。
 
 ## 実行
 
@@ -19,7 +19,9 @@ npm run dev
 - `F`: 通常探索中にスマートフォンを開く／閉じる
 - `Escape`: スマートフォン内で戻る。Homeでは閉じる
 
-起動時のStart Menuで`New Game`を選ぶと、架空の`demo-assembly-room`から始まります。2個のComponentを青色AssemblyStationへ順不同で置き、`E`または`Space`でCombineします。3D progress barが完了すると入力Itemが非表示になり、事前生成済みの青いBundle Itemが有効になります。その完成Itemを右側テーブルのPlacePointへ運ぶと、架空Photoと安全なCheckpointが保存されます。
+起動時のStart Menuで`New Game`を選ぶと、架空の`campaign-bedroom`から始まります。Phone Storyを起点にCafe、Park、Preparation Space、Viewpoint、Ending Roomを順に巡り、Placement、Reach、Processing、Assemblyを一つの物語として体験します。Campaignは6つの安全なCheckpointと段階的なMessage／Photo解放を持ちます。
+
+Phase 11の目標プレイ時間は20〜30分ですが、初回はCampaignの長さとテンポを測るためのskeletonです。実際の時間はユーザーの通しプレイ結果をもとにPhase 12で調整します。
 
 `Continue`はPlayer座標やTask途中状態を復元せず、最後の安全なCheckpointが定義するScene・Phone進行・再開イベント列から再構築します。`Reset Progress`はGame SaveとPhone進行を初期化します。
 
@@ -85,9 +87,11 @@ npm run dev
 - `GameProgressController`: New Game / Continue / Resetと安全な復元順序を調停
 - `StartMenu`: 保存状況に応じたNew Game / Continue / ResetのDOM表示
 
-Phase 10のScene、Event Sequence、Phone content、Checkpointは`src/content/demo/phase10*.ts`に分離しています。AssemblyTaskも既存の`task` Eventと`TaskManager`を利用するため、新しいEvent primitiveは追加していません。旧Phase 4〜9のScene・Phone content・CheckpointもRegistryへ残しているため、既存のv1 Save IDは引き続き解決できます。AssemblyStationはSceneRuntime所有の汎用Interactableとして登録され、Stageの既存破棄経路で3D resourceを解放します。
+Phase 11のScene、Phone content、canonical Event Sequence、Checkpointは`src/content/campaign/`に分離しています。`campaignContent.ts`は旧Phase 6〜10データとCampaignデータをRegistryへ渡すだけの薄いcontent bundleであり、runtime managerではありません。CheckpointのresumeSequenceはcanonical segment列のsuffixから生成するため、Story本文をCheckpointごとに複製しません。
 
-`localStorage`ではGame Saveの`ur-game:save:v1`とPhone進行の`ur-game:phone-progress:v1`を分離しています。Phase 10でも両schemaはv1のままです。Game SaveはCheckpoint IDだけを保持し、Itemのactive・加工状態、Station状態・Timer、Player/NPC/Item座標、Carry、Task、Dialogue行、EventRunner index、Rapier状態は保存しません。Placement Retry用のItem runtime stateはScene内メモリだけに保持し、localStorageへ保存しません。
+Campaign専用の`Chapter`、`CampaignManager`、新しいGameEvent／Taskは追加していません。既存の`EventRunner`、`SceneManager`、4種類のTaskをそのまま使用し、旧Phase 6〜10のScene・Phone content・Checkpointもv1 Save互換のため登録を維持しています。
+
+`localStorage`ではGame Saveの`ur-game:save:v1`とPhone進行の`ur-game:phone-progress:v1`を分離しています。Phase 11でも両schemaはv1のままです。Game SaveはCheckpoint IDだけを保持し、Campaign index、Itemのactive・加工状態、Station状態・Timer、Player/NPC/Item座標、Carry、Task、Dialogue行、EventRunner index、Rapier状態は保存しません。Checkpointがcanonical Scene・Phone snapshot・残りのEvent suffixを指定します。
 
 入力ソースやゲームループの境界を保ち、キーコードは`KeyboardInput`のみに閉じ込めています。アイテムは操作性を優先してDynamicRigidBodyにせず、床・保持・PlacePointへの配置状態を明示的に切り替えています。
 

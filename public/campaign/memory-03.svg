@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" role="img" aria-labelledby="title description">
+  <title id="title">Fictional preparation memory</title>
+  <desc id="description">Two colorful prepared items resting on a work table.</desc>
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#e9efce"/>
+      <stop offset="1" stop-color="#78a487"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="500" rx="36" fill="url(#background)"/>
+  <rect x="90" y="320" width="620" height="44" rx="20" fill="#8b6248"/>
+  <rect x="155" y="362" width="36" height="105" rx="12" fill="#704c3b"/>
+  <rect x="609" y="362" width="36" height="105" rx="12" fill="#704c3b"/>
+  <circle cx="300" cy="260" r="78" fill="#df6756"/>
+  <path d="M265 190q35-48 70 0q-32-10-70 0" fill="#53815a"/>
+  <rect x="440" y="190" width="130" height="135" rx="24" fill="#e5c16f"/>
+  <path d="M463 225h84M463 260h84M463 295h58" stroke="#fff0bd" stroke-width="12" stroke-linecap="round"/>
+  <circle cx="300" cy="260" r="96" fill="none" stroke="#fff8df" stroke-width="9" opacity=".7"/>
+  <rect x="425" y="175" width="160" height="165" rx="30" fill="none" stroke="#fff8df" stroke-width="9" opacity=".7"/>
+  <text x="400" y="70" text-anchor="middle" font-family="system-ui, sans-serif" font-size="30" font-weight="700" fill="#466c55">PREPARATION SPACE · FICTIONAL</text>
+</svg>
