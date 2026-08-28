@@ -1,4 +1,5 @@
 import type { Vector3Config } from '../config/gameConfig';
+import type { AudioCue } from '../audio/AudioTypes';
 import type { DialogueSequence } from '../dialogue/DialogueTypes';
 import type { PhoneObjective, PhoneStoryCard } from '../phone/PhoneTypes';
 
@@ -78,6 +79,11 @@ export interface TransitionCardEvent {
   readonly card: TransitionCardDefinition;
 }
 
+export interface AudioCueEvent {
+  readonly type: 'audio_cue';
+  readonly cue: AudioCue;
+}
+
 export type GameEvent =
   | DialogueEvent
   | MoveNpcEvent
@@ -91,7 +97,8 @@ export type GameEvent =
   | ChangeSceneEvent
   | SetCheckpointEvent
   | PhoneStoryEvent
-  | TransitionCardEvent;
+  | TransitionCardEvent
+  | AudioCueEvent;
 
 export interface EventSequence {
   readonly id: string;

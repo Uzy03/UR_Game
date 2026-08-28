@@ -1,5 +1,12 @@
 import type { EventSequence, GameEvent } from '../../events/EventTypes';
 import {
+  CAMPAIGN_ENDING_BGM_ID,
+  CAMPAIGN_ENDING_CHIME_SFX_ID,
+  CAMPAIGN_MAIN_BGM_ID,
+  CAMPAIGN_MEMORY_SFX_ID,
+  CAMPAIGN_TRANSITION_SFX_ID,
+} from './campaignAudioContent';
+import {
   CAMPAIGN_AFTER_MEETING_CHECKPOINT_ID,
   CAMPAIGN_AFTER_OUTING_CHECKPOINT_ID,
   CAMPAIGN_AFTER_PREPARATION_CHECKPOINT_ID,
@@ -51,8 +58,51 @@ type CampaignSegmentKey =
   | 'journey'
   | 'ending';
 
+const PLAY_MAIN_BGM_EVENT = {
+  type: 'audio_cue',
+  cue: {
+    kind: 'play_bgm',
+    audioId: CAMPAIGN_MAIN_BGM_ID,
+    fadeSeconds: 0.8,
+  },
+} as const satisfies GameEvent;
+
+const PLAY_ENDING_BGM_EVENT = {
+  type: 'audio_cue',
+  cue: {
+    kind: 'play_bgm',
+    audioId: CAMPAIGN_ENDING_BGM_ID,
+    fadeSeconds: 1,
+  },
+} as const satisfies GameEvent;
+
+const PLAY_TRANSITION_SFX_EVENT = {
+  type: 'audio_cue',
+  cue: {
+    kind: 'play_sfx',
+    audioId: CAMPAIGN_TRANSITION_SFX_ID,
+  },
+} as const satisfies GameEvent;
+
+const PLAY_MEMORY_SFX_EVENT = {
+  type: 'audio_cue',
+  cue: {
+    kind: 'play_sfx',
+    audioId: CAMPAIGN_MEMORY_SFX_ID,
+  },
+} as const satisfies GameEvent;
+
+const PLAY_ENDING_CHIME_EVENT = {
+  type: 'audio_cue',
+  cue: {
+    kind: 'play_sfx',
+    audioId: CAMPAIGN_ENDING_CHIME_SFX_ID,
+  },
+} as const satisfies GameEvent;
+
 const CAMPAIGN_SEGMENTS = {
   prologue: [
+    PLAY_MAIN_BGM_EVENT,
     {
       type: 'set_date',
       date: '2042-04-12',
@@ -83,6 +133,7 @@ const CAMPAIGN_SEGMENTS = {
         text: 'Meet Demo Companion at Lantern Cafe.',
       },
     },
+    PLAY_TRANSITION_SFX_EVENT,
     {
       type: 'transition_card',
       card: CAMPAIGN_MEETING_TRANSITION_CARD,
@@ -133,6 +184,7 @@ const CAMPAIGN_SEGMENTS = {
       type: 'unlock_photo',
       photoId: CAMPAIGN_MEETING_PHOTO_ID,
     },
+    PLAY_MEMORY_SFX_EVENT,
     {
       type: 'set_objective',
       objective: null,
@@ -143,6 +195,8 @@ const CAMPAIGN_SEGMENTS = {
     },
   ],
   outing: [
+    PLAY_MAIN_BGM_EVENT,
+    PLAY_TRANSITION_SFX_EVENT,
     {
       type: 'transition_card',
       card: CAMPAIGN_OUTING_TRANSITION_CARD,
@@ -209,6 +263,7 @@ const CAMPAIGN_SEGMENTS = {
       type: 'unlock_message',
       messageId: CAMPAIGN_OUTING_MESSAGE_ID,
     },
+    PLAY_MEMORY_SFX_EVENT,
     {
       type: 'set_objective',
       objective: null,
@@ -228,6 +283,8 @@ const CAMPAIGN_SEGMENTS = {
     },
   ],
   preparation: [
+    PLAY_MAIN_BGM_EVENT,
+    PLAY_TRANSITION_SFX_EVENT,
     {
       type: 'transition_card',
       card: CAMPAIGN_PREPARATION_TRANSITION_CARD,
@@ -289,6 +346,7 @@ const CAMPAIGN_SEGMENTS = {
       type: 'unlock_message',
       messageId: CAMPAIGN_PREPARATION_MESSAGE_ID,
     },
+    PLAY_MEMORY_SFX_EVENT,
     {
       type: 'set_objective',
       objective: null,
@@ -308,6 +366,8 @@ const CAMPAIGN_SEGMENTS = {
     },
   ],
   journey: [
+    PLAY_MAIN_BGM_EVENT,
+    PLAY_TRANSITION_SFX_EVENT,
     {
       type: 'transition_card',
       card: CAMPAIGN_JOURNEY_TRANSITION_CARD,
@@ -365,6 +425,7 @@ const CAMPAIGN_SEGMENTS = {
       type: 'unlock_photo',
       photoId: CAMPAIGN_VIEWPOINT_PHOTO_ID,
     },
+    PLAY_MEMORY_SFX_EVENT,
     {
       type: 'set_objective',
       objective: null,
@@ -384,6 +445,8 @@ const CAMPAIGN_SEGMENTS = {
     },
   ],
   ending: [
+    PLAY_ENDING_BGM_EVENT,
+    PLAY_TRANSITION_SFX_EVENT,
     {
       type: 'transition_card',
       card: CAMPAIGN_ENDING_TRANSITION_CARD,
@@ -418,6 +481,7 @@ const CAMPAIGN_SEGMENTS = {
       type: 'unlock_photo',
       photoId: CAMPAIGN_ENDING_PHOTO_ID,
     },
+    PLAY_MEMORY_SFX_EVENT,
     {
       type: 'set_objective',
       objective: null,
@@ -432,6 +496,7 @@ const CAMPAIGN_SEGMENTS = {
         ],
       },
     },
+    PLAY_ENDING_CHIME_EVENT,
     {
       type: 'set_checkpoint',
       checkpointId: CAMPAIGN_COMPLETE_CHECKPOINT_ID,
@@ -501,6 +566,7 @@ export const CAMPAIGN_BEFORE_ENDING_RESUME_SEQUENCE = createCampaignResumeSequen
 export const CAMPAIGN_COMPLETE_RESUME_SEQUENCE = {
   id: 'campaign-complete-resume',
   events: [
+    PLAY_ENDING_BGM_EVENT,
     {
       type: 'speech',
       npcId: CAMPAIGN_COMPANION_NPC_ID,

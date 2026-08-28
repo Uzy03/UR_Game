@@ -1,6 +1,6 @@
-# Anniversary Game — Phase 12
+# Anniversary Game — Phase 13
 
-交際1周年記念の短編3Dゲームに向けた、Webブラウザ用のゲーム基盤です。Phase 12では架空データだけの一本道Campaignへ、シーン間の暗転と日付・タイトルカードを表示する最小限のpresentation layerを追加しています。
+交際1周年記念の短編3Dゲームに向けた、Webブラウザ用のゲーム基盤です。Phase 13では架空Campaignへ、BGM・短いSE・crossfade・Muteを扱う最小限のAudio基盤を追加しています。
 
 ## 実行
 
@@ -18,10 +18,13 @@ npm run dev
 - `R`: 時間切れ画面からタスクをリトライ
 - `F`: 通常探索中にスマートフォンを開く／閉じる
 - `Escape`: スマートフォン内で戻る。Homeでは閉じる
+- `Sound On` / `Sound Off`: 画面右上のボタンでsession中のBGMとSEをMute
 
 起動時のStart Menuで`New Game`を選ぶと、架空の`campaign-bedroom`から始まります。Phone Storyを起点にCafe、Park、Preparation Space、Viewpoint、Ending Roomを順に巡り、Placement、Reach、Processing、Assemblyを一つの物語として体験します。Campaignは6つの安全なCheckpointと段階的なMessage／Photo解放を持ちます。
 
 各Segmentへ移る前には、架空の日付・タイトル・場所を持つTransition Cardが約2秒表示されます。表示は自動で完了し、skip用の新しい入力はありません。CSSだけで暗転するためThree.jsの描画パイプラインは変更していません。
+
+New Gameのユーザー操作後にMain BGMが始まり、Transition CardとMemory解放には短いSE、Endingには専用BGMとchimeを使用します。ブラウザのautoplay制約で再生が拒否されてもゲームを停止せず、次の`pointerdown`または`keydown`までBGM要求を保持します。再生は共有Web Audio Contextを使い、短いBGM素材もサンプル精度で途切れにくくloopします。
 
 `Continue`はPlayer座標やTask途中状態を復元せず、最後の安全なCheckpointが定義するScene・Phone進行・再開イベント列から再構築します。`Reset Progress`はGame SaveとPhone進行を初期化します。
 
@@ -37,8 +40,9 @@ npm run dev
 4. プレイヤーがRapierへ移動要求を送る
 5. 物理ワールドを進め、解決後の座標へ描画モデルを同期する
 6. インタラクションとEventRunnerを更新する
-7. 追従カメラとNPC吹き出しを更新する
-8. Three.jsで描画する
+7. EventRunnerから独立したAudio fadeを更新する
+8. 追従カメラとNPC吹き出しを更新する
+9. Three.jsで描画する
 
 バックグラウンド復帰時の大きな移動を避けるため、1フレームの `deltaTime` には上限を設けています。
 
@@ -70,8 +74,12 @@ npm run dev
 - `AssemblyTask`: 対象AssemblyStationの更新、Combine完了判定、制限時間を管理
 - `CountdownTimer`: ゲームループのdeltaTimeで制限時間を管理
 - `EventRunner`: データで定義したイベントをゲームループ上で開始・待機・完了し、Story PhoneとTransition Cardを含むcancel/error cleanupも管理
-- `EventTypes`: 会話・Task・Phone・Scene切替・Checkpoint保存・Transition Cardを表すDiscriminated Union
+- `EventTypes`: 会話・Task・Phone・Scene切替・Checkpoint保存・Transition Card・Audio Cueを表すDiscriminated Union
 - `TransitionActions`: EventRunnerとDOM表示を分離するpresentation境界
+- `AudioContentRegistry`: Audio ID、種別、local source、volume、loopの静的定義を検証・解決
+- `AudioManager`: BGM/SFX channel、deltaTime crossfade、autoplay unlock、session-only Mute、disposeを管理
+- `BrowserAudioMediaFactory`: local音源をdecodeして共有Web Audio Context上でsample-accurate loop・one-shot再生するbrowser境界
+- `AudioActions`: EventRunnerをHTMLAudioElementから分離するAudio境界
 - `TaskEventBinding`: Task開始前のゲーム世界準備をEventRunnerから分離
 - `ReachZoneTaskEventBinding`: 到着Task開始前の一時UI・Interaction選択解除を担当し、PlayerやCarryを巻き戻さない
 - `ProcessingTaskEventBinding`: Retry時にCarry・Station・Item・PlacePoint・Playerをraw開始状態へ戻す
@@ -88,14 +96,25 @@ npm run dev
 - `GameProgressController`: New Game / Continue / Resetと安全な復元順序を調停
 - `StartMenu`: 保存状況に応じたNew Game / Continue / ResetのDOM表示
 - `TransitionOverlay`: data-drivenな日付・タイトル・任意subtitleをfull-screen HTML/CSSで表示
+- `AudioMuteButton`: Audio状態やSaveを持たず、Mute切替をHTML buttonとして表示
 
-CampaignのScene、Phone content、Transition Card、canonical Event Sequence、Checkpointは`src/content/campaign/`に分離しています。`campaignContent.ts`は旧Phase 6〜10データとCampaignデータをRegistryへ渡すだけの薄いcontent bundleであり、runtime managerではありません。CheckpointのresumeSequenceはcanonical segment列のsuffixから生成するため、Story本文やTransition CardをCheckpointごとに複製しません。
+CampaignのScene、Phone content、Transition Card、Audio content、canonical Event Sequence、Checkpointは`src/content/campaign/`に分離しています。`campaignContent.ts`は旧Phase 6〜10データとCampaignデータをRegistryへ渡すだけの薄いcontent bundleであり、runtime managerではありません。CheckpointのresumeSequenceはcanonical segment列のsuffixから生成するため、Story本文・Transition Card・Audio CueをCheckpointごとに複製しません。
 
-Campaign専用の`Chapter`、`CampaignManager`、新しいTaskは追加していません。Phase 12で追加したGameEventはpresentation専用の`transition_card` 1種類だけです。`SceneManager`と4種類のTaskは変更せず、旧Phase 6〜11のScene・Phone content・Checkpointもv1 Save互換のため登録を維持しています。
+Campaign専用の`Chapter`、`CampaignManager`、新しいTaskは追加していません。Phase 13で追加したGameEventはimmediateな`audio_cue` 1種類だけです。`SceneManager`、`SceneDefinition`、Task、PhoneControllerはAudioを知らず、旧Phase 6〜12のScene・Phone content・Checkpointもv1 Save互換のため登録を維持しています。
 
-`localStorage`ではGame Saveの`ur-game:save:v1`とPhone進行の`ur-game:phone-progress:v1`を分離しています。Phase 12でも両schemaはv1のままです。Game SaveはCheckpoint IDだけを保持し、Transitionの表示状態・経過時間も保存しません。Checkpointがcanonical Scene・Phone snapshot・残りのEvent suffixを指定します。
+`localStorage`ではGame Saveの`ur-game:save:v1`とPhone進行の`ur-game:phone-progress:v1`を分離しています。Phase 13でも両schemaはv1のままです。current BGM、再生位置、Mute、volume、unlock状態は保存せず、Checkpointのcanonical resume sequenceが適切なBGM Cueを再指定します。
 
 入力ソースやゲームループの境界を保ち、キーコードは`KeyboardInput`のみに閉じ込めています。アイテムは操作性を優先してDynamicRigidBodyにせず、床・保持・PlacePointへの配置状態を明示的に切り替えています。
+
+## Placeholder Audio
+
+`public/audio/`の5つのWAVは、Phase 13用に[`scripts/generate-placeholder-audio.mjs`](scripts/generate-placeholder-audio.mjs)から決定的に生成したオリジナルplaceholderです。外部音源、市販曲、録音、学習済み楽曲、ライセンス不明素材は使用していません。
+
+```bash
+npm run generate:audio
+```
+
+で同じ構成のmono 16-bit PCM WAVを再生成できます。BGMは8秒の小音量loop、SEは0.85〜1.7秒です。本番用の楽曲へ置換する際も、public repositoryで再配布可能な権利を確認してください。
 
 ## 公開前のセキュリティ
 

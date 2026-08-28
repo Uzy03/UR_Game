@@ -1,3 +1,5 @@
+import type { AudioActions } from '../audio/AudioActions';
+import type { AudioCue } from '../audio/AudioTypes';
 import type { DialogueManager } from '../dialogue/DialogueManager';
 import type { InputManager } from '../input/InputManager';
 import { InputAction } from '../input/InputAction';
@@ -42,6 +44,7 @@ interface EventRunnerDependencies {
   readonly scenes: SceneActions;
   readonly checkpoints: CheckpointActions;
   readonly transition: TransitionActions;
+  readonly audio: AudioActions;
 }
 
 interface EventRunnerOptions {
@@ -173,6 +176,7 @@ export class EventRunner {
       case 'unlock_photo':
       case 'change_scene':
       case 'set_checkpoint':
+      case 'audio_cue':
         // Synchronous service events complete during beginCurrentEvent().
         break;
       case 'phone_story':
@@ -390,6 +394,9 @@ export class EventRunner {
         }
         break;
       }
+      case 'audio_cue':
+        this.runImmediateEvent(event.type, () => this.dispatchAudioCue(event.cue));
+        break;
       default: {
         const unsupported = event as { readonly type?: unknown };
         this.failCurrentEvent(
@@ -435,6 +442,24 @@ export class EventRunner {
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
       this.failCurrentEvent(message, eventType);
+    }
+  }
+
+  private dispatchAudioCue(cue: AudioCue): void {
+    switch (cue.kind) {
+      case 'play_bgm':
+        this.dependencies.audio.playBgm(cue.audioId, cue.fadeSeconds);
+        break;
+      case 'stop_bgm':
+        this.dependencies.audio.stopBgm(cue.fadeSeconds);
+        break;
+      case 'play_sfx':
+        this.dependencies.audio.playSfx(cue.audioId);
+        break;
+      default: {
+        const unsupported = cue as { readonly kind?: unknown };
+        throw new Error(`Unsupported Audio Cue kind "${String(unsupported.kind)}".`);
+      }
     }
   }
 

@@ -28,6 +28,9 @@ export const GAME_CONFIG = {
     maxPixelRatio: 2,
     clearColor: 0xb9d9e8,
   },
+  audio: {
+    defaultBgmFadeSeconds: 0.8,
+  },
   physics: {
     gravity: { x: 0, y: -9.81, z: 0 },
     characterOffset: CHARACTER_OFFSET,

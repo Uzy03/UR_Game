@@ -1,3 +1,5 @@
+import type { AudioContentRegistry } from '../audio/AudioContentRegistry';
+import { assertValidAudioCue } from '../audio/AudioCueValidation';
 import type { EventSequence, GameEvent } from '../events/EventTypes';
 import { assertValidTransitionCardDefinition } from '../events/TransitionCardValidation';
 import type { PhoneContentRegistry } from '../phone/PhoneContentRegistry';
@@ -17,6 +19,7 @@ export class CheckpointRegistry {
     definitions: readonly CheckpointDefinition[],
     private readonly scenes: SceneContentRegistry,
     private readonly phoneContent: PhoneContentRegistry,
+    private readonly audioContent: AudioContentRegistry,
   ) {
     for (const definition of definitions) {
       this.validateDefinition(definition);
@@ -133,6 +136,9 @@ export class CheckpointRegistry {
         break;
       case 'transition_card':
         assertValidTransitionCardDefinition(event.card, `${label} Transition Card`);
+        break;
+      case 'audio_cue':
+        assertValidAudioCue(event.cue, this.audioContent, `${label} Audio Cue`);
         break;
       default: {
         const unsupported = event as { readonly type?: unknown };

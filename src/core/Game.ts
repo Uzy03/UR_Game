@@ -9,6 +9,9 @@ import {
   Vector3,
   WebGLRenderer,
 } from 'three';
+import { AudioContentRegistry } from '../audio/AudioContentRegistry';
+import { AudioManager } from '../audio/AudioManager';
+import { BrowserAudioMediaFactory } from '../audio/BrowserAudioMediaFactory';
 import { FollowCamera } from '../camera/FollowCamera';
 import { GAME_CONFIG } from '../config/gameConfig';
 import {
@@ -20,7 +23,7 @@ import {
   PHASE5_HELPER_NPC_ID,
   PHASE5_INITIAL_SCENE_ID,
 } from '../content/demo/phase5Scenes';
-import { PHASE12_CONTENT } from '../content/campaign/campaignContent';
+import { PHASE13_CONTENT } from '../content/campaign/campaignContent';
 import { DialogueManager } from '../dialogue/DialogueManager';
 import { EventRunner } from '../events/EventRunner';
 import type { TaskEventBinding } from '../events/TaskEventBinding';
@@ -45,6 +48,7 @@ import { SceneManager, type SceneActions } from '../scene/SceneManager';
 import { SceneRuntime } from '../scene/SceneRuntime';
 import { TaskManager } from '../task/TaskManager';
 import { DialogueUI } from '../ui/DialogueUI';
+import { AudioMuteButton } from '../ui/AudioMuteButton';
 import { InteractionPrompt } from '../ui/InteractionPrompt';
 import { ResultOverlay } from '../ui/ResultOverlay';
 import { SpeechBubble } from '../ui/SpeechBubble';
@@ -53,8 +57,8 @@ import { TaskHUD } from '../ui/TaskHUD';
 import { TransitionOverlay } from '../ui/TransitionOverlay';
 import { PhoneUI } from '../ui/phone/PhoneUI';
 
-function requireElement(id: string): HTMLElement {
-  const element = document.querySelector<HTMLElement>(`#${id}`);
+function requireElement<T extends HTMLElement = HTMLElement>(id: string): T {
+  const element = document.querySelector<T>(`#${id}`);
   if (element === null) {
     throw new Error(`Required UI element #${id} was not found.`);
   }
@@ -70,6 +74,9 @@ export class Game {
   private readonly player: PlayerController;
   private readonly interaction: InteractionSystem;
   private readonly eventRunner: EventRunner;
+  private readonly audio: AudioManager;
+  private readonly audioMediaFactory: BrowserAudioMediaFactory;
+  private readonly audioMuteButton: AudioMuteButton;
   private readonly sceneManager: SceneManager;
   private readonly phone: PhoneController;
   private readonly progress: GameProgressController;
@@ -101,7 +108,7 @@ export class Game {
     );
 
     this.input = new InputManager([new KeyboardInput(window)]);
-    const content = PHASE12_CONTENT;
+    const content = PHASE13_CONTENT;
     const sceneContent = new SceneContentRegistry(content.scenes);
     const initialScene = sceneContent.getScene(content.initialSceneId);
     if (initialScene === undefined) {
@@ -139,10 +146,26 @@ export class Game {
     this.speechBubble = new SpeechBubble(requireElement('speech-bubble'), container);
     const phoneContent = new PhoneContentRegistry(content.phoneContent);
     const phoneProgress = new PhoneProgress(phoneContent, new PhoneProgressStore());
+    const audioContent = new AudioContentRegistry(content.audioContent);
+    this.audioMediaFactory = new BrowserAudioMediaFactory();
+    this.audio = new AudioManager(audioContent, {
+      unlockTarget: window,
+      unlockMedia: () => this.audioMediaFactory.unlock(),
+      createMedia: (src) => this.audioMediaFactory.create(src),
+      defaultFadeSeconds: GAME_CONFIG.audio.defaultBgmFadeSeconds,
+    });
+    this.audioMuteButton = new AudioMuteButton(
+      requireElement<HTMLButtonElement>('audio-mute'),
+    );
+    this.audioMuteButton.setMuted(this.audio.isMuted);
+    this.audioMuteButton.setToggleHandler(() => {
+      this.audioMuteButton.setMuted(this.audio.toggleMuted());
+    });
     const checkpointRegistry = new CheckpointRegistry(
       content.checkpoints,
       sceneContent,
       phoneContent,
+      audioContent,
     );
     let sceneManagerTarget: SceneManager | null = null;
     let progressTarget: GameProgressController | null = null;
@@ -191,6 +214,7 @@ export class Game {
         scenes: sceneActions,
         checkpoints: checkpointActions,
         transition,
+        audio: this.audio,
       },
       {
         successResultDurationSeconds: GAME_CONFIG.phase3.successResultDurationSeconds,
@@ -312,6 +336,9 @@ export class Game {
     window.removeEventListener('resize', this.resize);
     this.progress.dispose();
     this.eventRunner.dispose();
+    this.audioMuteButton.dispose();
+    this.audio.dispose();
+    this.audioMediaFactory.dispose();
     this.phone.dispose();
     this.sceneManager.dispose();
     this.interaction.dispose();
@@ -350,6 +377,7 @@ export class Game {
     this.player.updateAfterPhysics(deltaSeconds);
     this.interaction.update();
     this.eventRunner.update(deltaSeconds);
+    this.audio.update(deltaSeconds);
     this.followCamera.update(deltaSeconds);
     this.speechBubble.update(this.camera, deltaSeconds);
     this.renderer.render(this.scene, this.camera);
