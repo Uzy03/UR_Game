@@ -21,7 +21,7 @@ export interface CampaignContentBundle {
 }
 
 // This bundle only composes static content. Runtime ownership remains in Game/SceneManager.
-export const PHASE11_CONTENT = {
+export const PHASE12_CONTENT = {
   scenes: [
     ...PHASE10_SCENES,
     ...CAMPAIGN_SCENES,

@@ -14,6 +14,8 @@ import type { SpeechBubble } from '../ui/SpeechBubble';
 import type { TaskHUD } from '../ui/TaskHUD';
 import type { EventSequence } from './EventTypes';
 import type { TaskEventBinding } from './TaskEventBinding';
+import type { TransitionActions } from './TransitionActions';
+import { assertValidTransitionCardDefinition } from './TransitionCardValidation';
 
 export type EventRunnerState = 'idle' | 'running' | 'completed' | 'cancelled' | 'error';
 
@@ -39,6 +41,7 @@ interface EventRunnerDependencies {
   readonly phoneStory: PhoneStoryActions;
   readonly scenes: SceneActions;
   readonly checkpoints: CheckpointActions;
+  readonly transition: TransitionActions;
 }
 
 interface EventRunnerOptions {
@@ -56,6 +59,7 @@ export class EventRunner {
   private taskPhase: TaskEventPhase = 'none';
   private activeTaskBinding: TaskEventBinding | null = null;
   private activeNpc: NPCController | null = null;
+  private transitionVisible = false;
   private savedPlayerMovementEnabled: boolean | null = null;
   private savedInteractionEnabled: boolean | null = null;
   private readonly savedNpcInteractionStates = new Map<NPCController, boolean>();
@@ -173,6 +177,15 @@ export class EventRunner {
         break;
       case 'phone_story':
         // Story cards complete through their guarded UI callback.
+        break;
+      case 'transition_card':
+        this.waitRemainingSeconds = Math.max(
+          0,
+          this.waitRemainingSeconds - safeDeltaSeconds,
+        );
+        if (this.waitRemainingSeconds === 0) {
+          this.completeCurrentEvent();
+        }
         break;
     }
   }
@@ -364,6 +377,19 @@ export class EventRunner {
         }
         break;
       }
+      case 'transition_card': {
+        this.setGameplayEnabled(false);
+        try {
+          assertValidTransitionCardDefinition(event.card, 'Transition Card');
+          this.transitionVisible = true;
+          this.dependencies.transition.show(event.card);
+          this.waitRemainingSeconds = event.card.durationSeconds;
+        } catch (error: unknown) {
+          const message = error instanceof Error ? error.message : String(error);
+          this.failCurrentEvent(message, event.type);
+        }
+        break;
+      }
       default: {
         const unsupported = event as { readonly type?: unknown };
         this.failCurrentEvent(
@@ -455,6 +481,9 @@ export class EventRunner {
       this.dependencies.taskHud.hide();
       this.dependencies.resultOverlay.hide();
     }
+    if (completedEvent?.type === 'transition_card') {
+      this.hideTransition();
+    }
 
     this.currentEventStarted = false;
     this.waitRemainingSeconds = 0;
@@ -504,10 +533,19 @@ export class EventRunner {
 
   private clearUiAndTaskState(): void {
     this.dependencies.phoneStory.cancelStoryPresentation();
+    this.hideTransition();
     this.dependencies.taskManager.reset();
     this.dependencies.taskHud.hide();
     this.dependencies.resultOverlay.hide();
     this.dependencies.speechBubble.hide();
+  }
+
+  private hideTransition(): void {
+    if (!this.transitionVisible) {
+      return;
+    }
+    this.transitionVisible = false;
+    this.dependencies.transition.hide();
   }
 
   private captureControls(): void {

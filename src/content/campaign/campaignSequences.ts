@@ -35,6 +35,13 @@ import {
   CAMPAIGN_ENDING_CARD,
   CAMPAIGN_INVITATION_CARD,
 } from './campaignPhoneStory';
+import {
+  CAMPAIGN_ENDING_TRANSITION_CARD,
+  CAMPAIGN_JOURNEY_TRANSITION_CARD,
+  CAMPAIGN_MEETING_TRANSITION_CARD,
+  CAMPAIGN_OUTING_TRANSITION_CARD,
+  CAMPAIGN_PREPARATION_TRANSITION_CARD,
+} from './campaignTransitionCards';
 
 type CampaignSegmentKey =
   | 'prologue'
@@ -75,6 +82,10 @@ const CAMPAIGN_SEGMENTS = {
         id: 'campaign-meet-at-cafe',
         text: 'Meet Demo Companion at Lantern Cafe.',
       },
+    },
+    {
+      type: 'transition_card',
+      card: CAMPAIGN_MEETING_TRANSITION_CARD,
     },
     {
       type: 'change_scene',
@@ -132,6 +143,10 @@ const CAMPAIGN_SEGMENTS = {
     },
   ],
   outing: [
+    {
+      type: 'transition_card',
+      card: CAMPAIGN_OUTING_TRANSITION_CARD,
+    },
     {
       type: 'change_scene',
       sceneId: CAMPAIGN_PARK_SCENE_ID,
@@ -214,6 +229,10 @@ const CAMPAIGN_SEGMENTS = {
   ],
   preparation: [
     {
+      type: 'transition_card',
+      card: CAMPAIGN_PREPARATION_TRANSITION_CARD,
+    },
+    {
       type: 'change_scene',
       sceneId: CAMPAIGN_PREP_SCENE_ID,
     },
@@ -290,6 +309,10 @@ const CAMPAIGN_SEGMENTS = {
   ],
   journey: [
     {
+      type: 'transition_card',
+      card: CAMPAIGN_JOURNEY_TRANSITION_CARD,
+    },
+    {
       type: 'change_scene',
       sceneId: CAMPAIGN_VIEWPOINT_SCENE_ID,
     },
@@ -361,6 +384,10 @@ const CAMPAIGN_SEGMENTS = {
     },
   ],
   ending: [
+    {
+      type: 'transition_card',
+      card: CAMPAIGN_ENDING_TRANSITION_CARD,
+    },
     {
       type: 'change_scene',
       sceneId: CAMPAIGN_ENDING_SCENE_ID,

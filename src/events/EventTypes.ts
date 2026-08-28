@@ -65,6 +65,19 @@ export interface PhoneStoryEvent {
   readonly card: PhoneStoryCard;
 }
 
+export interface TransitionCardDefinition {
+  readonly id: string;
+  readonly eyebrow?: string;
+  readonly title: string;
+  readonly subtitle?: string;
+  readonly durationSeconds: number;
+}
+
+export interface TransitionCardEvent {
+  readonly type: 'transition_card';
+  readonly card: TransitionCardDefinition;
+}
+
 export type GameEvent =
   | DialogueEvent
   | MoveNpcEvent
@@ -77,7 +90,8 @@ export type GameEvent =
   | UnlockPhotoEvent
   | ChangeSceneEvent
   | SetCheckpointEvent
-  | PhoneStoryEvent;
+  | PhoneStoryEvent
+  | TransitionCardEvent;
 
 export interface EventSequence {
   readonly id: string;

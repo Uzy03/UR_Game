@@ -1,4 +1,5 @@
 import type { EventSequence, GameEvent } from '../events/EventTypes';
+import { assertValidTransitionCardDefinition } from '../events/TransitionCardValidation';
 import type { PhoneContentRegistry } from '../phone/PhoneContentRegistry';
 import {
   isValidPhoneObjective,
@@ -129,6 +130,9 @@ export class CheckpointRegistry {
         ) {
           throw new Error(`${label} Phone Story subtitle must be a string when provided.`);
         }
+        break;
+      case 'transition_card':
+        assertValidTransitionCardDefinition(event.card, `${label} Transition Card`);
         break;
       default: {
         const unsupported = event as { readonly type?: unknown };

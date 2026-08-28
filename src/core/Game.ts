@@ -20,7 +20,7 @@ import {
   PHASE5_HELPER_NPC_ID,
   PHASE5_INITIAL_SCENE_ID,
 } from '../content/demo/phase5Scenes';
-import { PHASE11_CONTENT } from '../content/campaign/campaignContent';
+import { PHASE12_CONTENT } from '../content/campaign/campaignContent';
 import { DialogueManager } from '../dialogue/DialogueManager';
 import { EventRunner } from '../events/EventRunner';
 import type { TaskEventBinding } from '../events/TaskEventBinding';
@@ -50,6 +50,7 @@ import { ResultOverlay } from '../ui/ResultOverlay';
 import { SpeechBubble } from '../ui/SpeechBubble';
 import { StartMenu } from '../ui/StartMenu';
 import { TaskHUD } from '../ui/TaskHUD';
+import { TransitionOverlay } from '../ui/TransitionOverlay';
 import { PhoneUI } from '../ui/phone/PhoneUI';
 
 function requireElement(id: string): HTMLElement {
@@ -100,7 +101,7 @@ export class Game {
     );
 
     this.input = new InputManager([new KeyboardInput(window)]);
-    const content = PHASE11_CONTENT;
+    const content = PHASE12_CONTENT;
     const sceneContent = new SceneContentRegistry(content.scenes);
     const initialScene = sceneContent.getScene(content.initialSceneId);
     if (initialScene === undefined) {
@@ -134,6 +135,7 @@ export class Game {
     const dialogue = new DialogueManager(new DialogueUI(requireElement('dialogue-window')));
     const taskHud = new TaskHUD(requireElement('task-hud'));
     const resultOverlay = new ResultOverlay(requireElement('result-overlay'));
+    const transition = new TransitionOverlay(requireElement('transition-overlay'));
     this.speechBubble = new SpeechBubble(requireElement('speech-bubble'), container);
     const phoneContent = new PhoneContentRegistry(content.phoneContent);
     const phoneProgress = new PhoneProgress(phoneContent, new PhoneProgressStore());
@@ -188,6 +190,7 @@ export class Game {
         phoneStory: phoneStoryActions,
         scenes: sceneActions,
         checkpoints: checkpointActions,
+        transition,
       },
       {
         successResultDurationSeconds: GAME_CONFIG.phase3.successResultDurationSeconds,

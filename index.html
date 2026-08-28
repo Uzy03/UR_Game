@@ -4,13 +4,13 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#b9d9e8" />
-    <title>Anniversary Game — Phase 11</title>
+    <title>Anniversary Game — Phase 12</title>
   </head>
   <body>
     <main id="app" aria-label="3D game"></main>
     <section id="start-menu" class="start-menu">
       <div class="start-menu-panel" role="dialog" aria-modal="true" aria-labelledby="start-menu-title">
-        <p class="start-menu-phase">Phase 11 Campaign</p>
+        <p class="start-menu-phase">Phase 12 Campaign</p>
         <h1 id="start-menu-title">Anniversary Game</h1>
         <p class="start-menu-description">Play a fictional campaign that connects every story and gameplay system.</p>
         <div class="start-menu-actions">
@@ -19,6 +19,20 @@
           <button type="button" class="start-menu-reset" data-start-reset hidden>Reset Progress</button>
         </div>
         <p class="start-menu-status" data-start-status role="status" aria-live="polite"></p>
+      </div>
+    </section>
+    <section
+      id="transition-overlay"
+      class="transition-overlay"
+      role="status"
+      aria-live="polite"
+      aria-hidden="true"
+      hidden
+    >
+      <div class="transition-card">
+        <p class="transition-eyebrow" data-transition-eyebrow></p>
+        <h2 class="transition-title" data-transition-title></h2>
+        <p class="transition-subtitle" data-transition-subtitle></p>
       </div>
     </section>
     <section id="task-hud" class="task-hud" aria-live="polite" hidden>

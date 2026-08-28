@@ -1,6 +1,6 @@
-# Anniversary Game — Phase 11
+# Anniversary Game — Phase 12
 
-交際1周年記念の短編3Dゲームに向けた、Webブラウザ用のゲーム基盤です。Phase 11ではPhase 0〜10の機能を新しいengine primitiveなしで接続し、架空データだけの一本道Campaignとして統合しています。
+交際1周年記念の短編3Dゲームに向けた、Webブラウザ用のゲーム基盤です。Phase 12では架空データだけの一本道Campaignへ、シーン間の暗転と日付・タイトルカードを表示する最小限のpresentation layerを追加しています。
 
 ## 実行
 
@@ -21,7 +21,7 @@ npm run dev
 
 起動時のStart Menuで`New Game`を選ぶと、架空の`campaign-bedroom`から始まります。Phone Storyを起点にCafe、Park、Preparation Space、Viewpoint、Ending Roomを順に巡り、Placement、Reach、Processing、Assemblyを一つの物語として体験します。Campaignは6つの安全なCheckpointと段階的なMessage／Photo解放を持ちます。
 
-Phase 11の目標プレイ時間は20〜30分ですが、初回はCampaignの長さとテンポを測るためのskeletonです。実際の時間はユーザーの通しプレイ結果をもとにPhase 12で調整します。
+各Segmentへ移る前には、架空の日付・タイトル・場所を持つTransition Cardが約2秒表示されます。表示は自動で完了し、skip用の新しい入力はありません。CSSだけで暗転するためThree.jsの描画パイプラインは変更していません。
 
 `Continue`はPlayer座標やTask途中状態を復元せず、最後の安全なCheckpointが定義するScene・Phone進行・再開イベント列から再構築します。`Reset Progress`はGame SaveとPhone進行を初期化します。
 
@@ -69,8 +69,9 @@ Phase 11の目標プレイ時間は20〜30分ですが、初回はCampaignの長
 - `ProcessingTask`: 対象Stationの更新、指定Itemの加工完了判定、制限時間を管理
 - `AssemblyTask`: 対象AssemblyStationの更新、Combine完了判定、制限時間を管理
 - `CountdownTimer`: ゲームループのdeltaTimeで制限時間を管理
-- `EventRunner`: データで定義したイベントをゲームループ上で開始・待機・完了し、Story Phoneを含むcancel/error cleanupも管理
-- `EventTypes`: 会話・Task・Phone・Scene切替・Checkpoint保存を表すDiscriminated Union
+- `EventRunner`: データで定義したイベントをゲームループ上で開始・待機・完了し、Story PhoneとTransition Cardを含むcancel/error cleanupも管理
+- `EventTypes`: 会話・Task・Phone・Scene切替・Checkpoint保存・Transition Cardを表すDiscriminated Union
+- `TransitionActions`: EventRunnerとDOM表示を分離するpresentation境界
 - `TaskEventBinding`: Task開始前のゲーム世界準備をEventRunnerから分離
 - `ReachZoneTaskEventBinding`: 到着Task開始前の一時UI・Interaction選択解除を担当し、PlayerやCarryを巻き戻さない
 - `ProcessingTaskEventBinding`: Retry時にCarry・Station・Item・PlacePoint・Playerをraw開始状態へ戻す
@@ -86,12 +87,13 @@ Phase 11の目標プレイ時間は20〜30分ですが、初回はCampaignの長
 - `GameSaveStore`: `checkpointId`だけを持つGame Save v1の保存・検証・削除
 - `GameProgressController`: New Game / Continue / Resetと安全な復元順序を調停
 - `StartMenu`: 保存状況に応じたNew Game / Continue / ResetのDOM表示
+- `TransitionOverlay`: data-drivenな日付・タイトル・任意subtitleをfull-screen HTML/CSSで表示
 
-Phase 11のScene、Phone content、canonical Event Sequence、Checkpointは`src/content/campaign/`に分離しています。`campaignContent.ts`は旧Phase 6〜10データとCampaignデータをRegistryへ渡すだけの薄いcontent bundleであり、runtime managerではありません。CheckpointのresumeSequenceはcanonical segment列のsuffixから生成するため、Story本文をCheckpointごとに複製しません。
+CampaignのScene、Phone content、Transition Card、canonical Event Sequence、Checkpointは`src/content/campaign/`に分離しています。`campaignContent.ts`は旧Phase 6〜10データとCampaignデータをRegistryへ渡すだけの薄いcontent bundleであり、runtime managerではありません。CheckpointのresumeSequenceはcanonical segment列のsuffixから生成するため、Story本文やTransition CardをCheckpointごとに複製しません。
 
-Campaign専用の`Chapter`、`CampaignManager`、新しいGameEvent／Taskは追加していません。既存の`EventRunner`、`SceneManager`、4種類のTaskをそのまま使用し、旧Phase 6〜10のScene・Phone content・Checkpointもv1 Save互換のため登録を維持しています。
+Campaign専用の`Chapter`、`CampaignManager`、新しいTaskは追加していません。Phase 12で追加したGameEventはpresentation専用の`transition_card` 1種類だけです。`SceneManager`と4種類のTaskは変更せず、旧Phase 6〜11のScene・Phone content・Checkpointもv1 Save互換のため登録を維持しています。
 
-`localStorage`ではGame Saveの`ur-game:save:v1`とPhone進行の`ur-game:phone-progress:v1`を分離しています。Phase 11でも両schemaはv1のままです。Game SaveはCheckpoint IDだけを保持し、Campaign index、Itemのactive・加工状態、Station状態・Timer、Player/NPC/Item座標、Carry、Task、Dialogue行、EventRunner index、Rapier状態は保存しません。Checkpointがcanonical Scene・Phone snapshot・残りのEvent suffixを指定します。
+`localStorage`ではGame Saveの`ur-game:save:v1`とPhone進行の`ur-game:phone-progress:v1`を分離しています。Phase 12でも両schemaはv1のままです。Game SaveはCheckpoint IDだけを保持し、Transitionの表示状態・経過時間も保存しません。Checkpointがcanonical Scene・Phone snapshot・残りのEvent suffixを指定します。
 
 入力ソースやゲームループの境界を保ち、キーコードは`KeyboardInput`のみに閉じ込めています。アイテムは操作性を優先してDynamicRigidBodyにせず、床・保持・PlacePointへの配置状態を明示的に切り替えています。
 
