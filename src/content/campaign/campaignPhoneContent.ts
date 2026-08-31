@@ -1,4 +1,5 @@
 import type { PhoneContentDefinition } from '../../phone/PhoneTypes';
+import type { CampaignStoryDefinition } from './CampaignStoryTypes';
 
 export const CAMPAIGN_THREAD_ID = 'campaign-demo-companion-thread';
 
@@ -28,78 +29,59 @@ export const CAMPAIGN_PHOTO_IDS = [
   CAMPAIGN_ENDING_PHOTO_ID,
 ] as const;
 
-export const CAMPAIGN_PHONE_CONTENT = {
+export function createCampaignPhoneContent(
+  story: CampaignStoryDefinition,
+): PhoneContentDefinition {
+  return {
   threads: [
     {
       id: CAMPAIGN_THREAD_ID,
-      title: 'Demo Companion',
+      title: story.phoneThreadTitle,
     },
   ],
   messages: [
     {
       id: CAMPAIGN_INVITATION_MESSAGE_ID,
       threadId: CAMPAIGN_THREAD_ID,
-      sender: 'Demo Companion',
-      text: 'This is a fictional invitation to Lantern Cafe.',
-      timeLabel: '09:10',
+      ...story.prologue.invitationMessage,
     },
     {
       id: CAMPAIGN_OUTING_MESSAGE_ID,
       threadId: CAMPAIGN_THREAD_ID,
-      sender: 'Demo Companion',
-      text: 'The imaginary park route was a bright little detour.',
-      timeLabel: '14:25',
+      ...story.outing.message,
     },
     {
       id: CAMPAIGN_PREPARATION_MESSAGE_ID,
       threadId: CAMPAIGN_THREAD_ID,
-      sender: 'Demo Companion',
-      text: 'Our placeholder picnic pieces are ready for the next stop.',
-      timeLabel: '16:40',
+      ...story.preparation.message,
     },
     {
       id: CAMPAIGN_ENDING_MESSAGE_ID,
       threadId: CAMPAIGN_THREAD_ID,
-      sender: 'Demo Companion',
-      text: 'Thanks for completing this entirely fictional campaign skeleton.',
-      timeLabel: '20:15',
+      ...story.ending.message,
     },
   ],
   photos: [
     {
       id: CAMPAIGN_MEETING_PHOTO_ID,
-      src: '/campaign/memory-01.svg',
-      alt: 'A fictional illustration of two drinks at a cafe table',
-      caption: 'Placeholder memory 1: Lantern Cafe',
-      date: '2042-04-12',
+      ...story.meeting.photo,
     },
     {
       id: CAMPAIGN_OUTING_PHOTO_ID,
-      src: '/campaign/memory-02.svg',
-      alt: 'A fictional illustration of a park fountain and two figures',
-      caption: 'Placeholder memory 2: Demo Park',
-      date: '2042-05-03',
+      ...story.outing.photo,
     },
     {
       id: CAMPAIGN_PREPARATION_PHOTO_ID,
-      src: '/campaign/memory-03.svg',
-      alt: 'A fictional illustration of prepared picnic items',
-      caption: 'Placeholder memory 3: Preparation Space',
-      date: '2042-06-14',
+      ...story.preparation.photo,
     },
     {
       id: CAMPAIGN_VIEWPOINT_PHOTO_ID,
-      src: '/campaign/memory-04.svg',
-      alt: 'A fictional illustration of a blue bundle at a viewpoint',
-      caption: 'Placeholder memory 4: Demo Viewpoint',
-      date: '2042-07-05',
+      ...story.journey.photo,
     },
     {
       id: CAMPAIGN_ENDING_PHOTO_ID,
-      src: '/campaign/ending.svg',
-      alt: 'A fictional illustration of five collected campaign memories',
-      caption: 'Placeholder finale: Campaign complete',
-      date: '2042-08-09',
+      ...story.ending.photo,
     },
   ],
-} as const satisfies PhoneContentDefinition;
+  } satisfies PhoneContentDefinition;
+}

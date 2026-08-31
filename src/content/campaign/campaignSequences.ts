@@ -37,18 +37,9 @@ import {
   CAMPAIGN_PREPARATION_PHOTO_ID,
   CAMPAIGN_VIEWPOINT_PHOTO_ID,
 } from './campaignPhoneContent';
-import {
-  CAMPAIGN_CONNECTION_CARD,
-  CAMPAIGN_ENDING_CARD,
-  CAMPAIGN_INVITATION_CARD,
-} from './campaignPhoneStory';
-import {
-  CAMPAIGN_ENDING_TRANSITION_CARD,
-  CAMPAIGN_JOURNEY_TRANSITION_CARD,
-  CAMPAIGN_MEETING_TRANSITION_CARD,
-  CAMPAIGN_OUTING_TRANSITION_CARD,
-  CAMPAIGN_PREPARATION_TRANSITION_CARD,
-} from './campaignTransitionCards';
+import type { CampaignPhoneStoryCards } from './campaignPhoneStory';
+import type { CampaignStoryDefinition } from './CampaignStoryTypes';
+import type { CampaignTransitionCards } from './campaignTransitionCards';
 
 type CampaignSegmentKey =
   | 'prologue'
@@ -100,12 +91,27 @@ const PLAY_ENDING_CHIME_EVENT = {
   },
 } as const satisfies GameEvent;
 
-const CAMPAIGN_SEGMENTS = {
+export interface CampaignSequences {
+  readonly main: EventSequence;
+  readonly afterMeeting: EventSequence;
+  readonly afterOuting: EventSequence;
+  readonly afterPreparation: EventSequence;
+  readonly beforeEnding: EventSequence;
+  readonly complete: EventSequence;
+  readonly segmentEventCounts: Readonly<Record<CampaignSegmentKey, number>>;
+}
+
+export function createCampaignSequences(
+  story: CampaignStoryDefinition,
+  phoneStory: CampaignPhoneStoryCards,
+  transitions: CampaignTransitionCards,
+): CampaignSequences {
+  const campaignSegments = {
   prologue: [
     PLAY_MAIN_BGM_EVENT,
     {
       type: 'set_date',
-      date: '2042-04-12',
+      date: story.prologue.date,
     },
     {
       type: 'set_objective',
@@ -116,11 +122,11 @@ const CAMPAIGN_SEGMENTS = {
     },
     {
       type: 'phone_story',
-      card: CAMPAIGN_CONNECTION_CARD,
+      card: phoneStory.connection,
     },
     {
       type: 'phone_story',
-      card: CAMPAIGN_INVITATION_CARD,
+      card: phoneStory.invitation,
     },
     {
       type: 'unlock_message',
@@ -136,7 +142,7 @@ const CAMPAIGN_SEGMENTS = {
     PLAY_TRANSITION_SFX_EVENT,
     {
       type: 'transition_card',
-      card: CAMPAIGN_MEETING_TRANSITION_CARD,
+      card: transitions.meeting,
     },
     {
       type: 'change_scene',
@@ -148,10 +154,7 @@ const CAMPAIGN_SEGMENTS = {
       type: 'dialogue',
       sequence: {
         id: 'campaign-meeting-intro',
-        lines: [
-          { speaker: 'Demo Companion', text: 'Welcome to our entirely fictional cafe.' },
-          { speaker: 'Player', text: 'I will bring the two demo drinks to the table.' },
-        ],
+        lines: story.meeting.dialogueIntro,
       },
     },
     {
@@ -174,10 +177,7 @@ const CAMPAIGN_SEGMENTS = {
       type: 'dialogue',
       sequence: {
         id: 'campaign-meeting-outro',
-        lines: [
-          { speaker: 'Demo Companion', text: 'The table is ready. Shall we visit the park?' },
-          { speaker: 'Player', text: 'That sounds like a good next chapter for this demo.' },
-        ],
+        lines: story.meeting.dialogueOutro,
       },
     },
     {
@@ -199,7 +199,7 @@ const CAMPAIGN_SEGMENTS = {
     PLAY_TRANSITION_SFX_EVENT,
     {
       type: 'transition_card',
-      card: CAMPAIGN_OUTING_TRANSITION_CARD,
+      card: transitions.outing,
     },
     {
       type: 'change_scene',
@@ -207,16 +207,13 @@ const CAMPAIGN_SEGMENTS = {
     },
     {
       type: 'set_date',
-      date: '2042-05-03',
+      date: story.outing.date,
     },
     {
       type: 'dialogue',
       sequence: {
         id: 'campaign-outing-intro',
-        lines: [
-          { speaker: 'Demo Companion', text: 'The first marker is beside the fountain.' },
-          { speaker: 'Player', text: 'I will follow the path rather than rush ahead.' },
-        ],
+        lines: story.outing.dialogueIntro,
       },
     },
     {
@@ -239,9 +236,7 @@ const CAMPAIGN_SEGMENTS = {
       type: 'dialogue',
       sequence: {
         id: 'campaign-outing-middle',
-        lines: [
-          { speaker: 'Demo Companion', text: 'The lantern overlook is only a short walk away.' },
-        ],
+        lines: story.outing.dialogueMiddle,
       },
     },
     {
@@ -272,9 +267,7 @@ const CAMPAIGN_SEGMENTS = {
       type: 'dialogue',
       sequence: {
         id: 'campaign-outing-outro',
-        lines: [
-          { speaker: 'Player', text: 'The short route gave this fictional outing a calm rhythm.' },
-        ],
+        lines: story.outing.dialogueOutro,
       },
     },
     {
@@ -287,7 +280,7 @@ const CAMPAIGN_SEGMENTS = {
     PLAY_TRANSITION_SFX_EVENT,
     {
       type: 'transition_card',
-      card: CAMPAIGN_PREPARATION_TRANSITION_CARD,
+      card: transitions.preparation,
     },
     {
       type: 'change_scene',
@@ -295,16 +288,13 @@ const CAMPAIGN_SEGMENTS = {
     },
     {
       type: 'set_date',
-      date: '2042-06-14',
+      date: story.preparation.date,
     },
     {
       type: 'dialogue',
       sequence: {
         id: 'campaign-preparation-intro',
-        lines: [
-          { speaker: 'Demo Companion', text: 'Two placeholder items need a quick preparation.' },
-          { speaker: 'Player', text: 'I will process each one, then move both to the table.' },
-        ],
+        lines: story.preparation.dialogueIntro,
       },
     },
     {
@@ -322,9 +312,7 @@ const CAMPAIGN_SEGMENTS = {
       type: 'dialogue',
       sequence: {
         id: 'campaign-preparation-ready',
-        lines: [
-          { speaker: 'Demo Companion', text: 'Both items are prepared and ready to carry.' },
-        ],
+        lines: story.preparation.dialogueReady,
       },
     },
     {
@@ -355,9 +343,7 @@ const CAMPAIGN_SEGMENTS = {
       type: 'dialogue',
       sequence: {
         id: 'campaign-preparation-outro',
-        lines: [
-          { speaker: 'Player', text: 'Everything is ready for the fictional viewpoint.' },
-        ],
+        lines: story.preparation.dialogueOutro,
       },
     },
     {
@@ -370,7 +356,7 @@ const CAMPAIGN_SEGMENTS = {
     PLAY_TRANSITION_SFX_EVENT,
     {
       type: 'transition_card',
-      card: CAMPAIGN_JOURNEY_TRANSITION_CARD,
+      card: transitions.journey,
     },
     {
       type: 'change_scene',
@@ -378,16 +364,13 @@ const CAMPAIGN_SEGMENTS = {
     },
     {
       type: 'set_date',
-      date: '2042-07-05',
+      date: story.journey.date,
     },
     {
       type: 'dialogue',
       sequence: {
         id: 'campaign-journey-intro',
-        lines: [
-          { speaker: 'Demo Companion', text: 'Let us combine the two components at the blue station.' },
-          { speaker: 'Player', text: 'Then I will deliver the finished bundle to the overlook.' },
-        ],
+        lines: story.journey.dialogueIntro,
       },
     },
     {
@@ -405,9 +388,7 @@ const CAMPAIGN_SEGMENTS = {
       type: 'dialogue',
       sequence: {
         id: 'campaign-journey-ready',
-        lines: [
-          { speaker: 'Demo Companion', text: 'The finished bundle is waiting on the station.' },
-        ],
+        lines: story.journey.dialogueReady,
       },
     },
     {
@@ -434,9 +415,7 @@ const CAMPAIGN_SEGMENTS = {
       type: 'dialogue',
       sequence: {
         id: 'campaign-journey-outro',
-        lines: [
-          { speaker: 'Demo Companion', text: 'One quiet room remains for the campaign finale.' },
-        ],
+        lines: story.journey.dialogueOutro,
       },
     },
     {
@@ -449,7 +428,7 @@ const CAMPAIGN_SEGMENTS = {
     PLAY_TRANSITION_SFX_EVENT,
     {
       type: 'transition_card',
-      card: CAMPAIGN_ENDING_TRANSITION_CARD,
+      card: transitions.ending,
     },
     {
       type: 'change_scene',
@@ -457,20 +436,17 @@ const CAMPAIGN_SEGMENTS = {
     },
     {
       type: 'set_date',
-      date: '2042-08-09',
+      date: story.ending.date,
     },
     {
       type: 'phone_story',
-      card: CAMPAIGN_ENDING_CARD,
+      card: phoneStory.ending,
     },
     {
       type: 'dialogue',
       sequence: {
         id: 'campaign-ending-intro',
-        lines: [
-          { speaker: 'Demo Companion', text: 'The placeholder album now shows our whole demo route.' },
-          { speaker: 'Player', text: 'Every mechanic became one continuous fictional journey.' },
-        ],
+        lines: story.ending.dialogueIntro,
       },
     },
     {
@@ -490,10 +466,7 @@ const CAMPAIGN_SEGMENTS = {
       type: 'dialogue',
       sequence: {
         id: 'campaign-ending-final',
-        lines: [
-          { speaker: 'Demo Companion', text: 'This fictional skeleton is ready for pacing feedback.' },
-          { speaker: 'Player', text: 'The real story can remain private until a later phase.' },
-        ],
+        lines: story.ending.dialogueFinal,
       },
     },
     PLAY_ENDING_CHIME_EVENT,
@@ -504,7 +477,7 @@ const CAMPAIGN_SEGMENTS = {
     {
       type: 'speech',
       npcId: CAMPAIGN_COMPANION_NPC_ID,
-      text: 'Fictional campaign complete!',
+      text: story.ending.completionSpeech,
       durationSeconds: 2.5,
     },
     {
@@ -512,7 +485,58 @@ const CAMPAIGN_SEGMENTS = {
       durationSeconds: 2,
     },
   ],
-} as const satisfies Record<CampaignSegmentKey, readonly GameEvent[]>;
+  } satisfies Record<CampaignSegmentKey, readonly GameEvent[]>;
+
+  const main = createCampaignResumeSequence('campaign-main', 'prologue', campaignSegments);
+  const afterMeeting = createCampaignResumeSequence(
+    'campaign-resume-after-meeting',
+    'outing',
+    campaignSegments,
+  );
+  const afterOuting = createCampaignResumeSequence(
+    'campaign-resume-after-outing',
+    'preparation',
+    campaignSegments,
+  );
+  const afterPreparation = createCampaignResumeSequence(
+    'campaign-resume-after-preparation',
+    'journey',
+    campaignSegments,
+  );
+  const beforeEnding = createCampaignResumeSequence(
+    'campaign-resume-before-ending',
+    'ending',
+    campaignSegments,
+  );
+  const complete = {
+    id: 'campaign-complete-resume',
+    events: [
+      PLAY_ENDING_BGM_EVENT,
+      {
+        type: 'speech',
+        npcId: CAMPAIGN_COMPANION_NPC_ID,
+        text: story.ending.resumeSpeech,
+        durationSeconds: 2.5,
+      },
+      {
+        type: 'wait',
+        durationSeconds: 2,
+      },
+    ],
+  } satisfies EventSequence;
+
+  return {
+    main,
+    afterMeeting,
+    afterOuting,
+    afterPreparation,
+    beforeEnding,
+    complete,
+    segmentEventCounts: Object.fromEntries(
+      CAMPAIGN_SEGMENT_ORDER.map((segment) => [segment, campaignSegments[segment].length]),
+    ) as Readonly<Record<CampaignSegmentKey, number>>,
+  };
+}
 
 const CAMPAIGN_SEGMENT_ORDER = [
   'prologue',
@@ -526,60 +550,15 @@ const CAMPAIGN_SEGMENT_ORDER = [
 function createCampaignResumeSequence(
   id: string,
   startSegment: CampaignSegmentKey,
+  segments: Record<CampaignSegmentKey, readonly GameEvent[]>,
 ): EventSequence {
   const startIndex = CAMPAIGN_SEGMENT_ORDER.indexOf(startSegment);
   const events: GameEvent[] = [];
   for (const segment of CAMPAIGN_SEGMENT_ORDER.slice(startIndex)) {
-    events.push(...CAMPAIGN_SEGMENTS[segment]);
+    events.push(...segments[segment]);
   }
   return {
     id,
     events,
   };
 }
-
-export const CAMPAIGN_MAIN_SEQUENCE = createCampaignResumeSequence(
-  'campaign-main',
-  'prologue',
-);
-
-export const CAMPAIGN_AFTER_MEETING_RESUME_SEQUENCE = createCampaignResumeSequence(
-  'campaign-resume-after-meeting',
-  'outing',
-);
-
-export const CAMPAIGN_AFTER_OUTING_RESUME_SEQUENCE = createCampaignResumeSequence(
-  'campaign-resume-after-outing',
-  'preparation',
-);
-
-export const CAMPAIGN_AFTER_PREPARATION_RESUME_SEQUENCE = createCampaignResumeSequence(
-  'campaign-resume-after-preparation',
-  'journey',
-);
-
-export const CAMPAIGN_BEFORE_ENDING_RESUME_SEQUENCE = createCampaignResumeSequence(
-  'campaign-resume-before-ending',
-  'ending',
-);
-
-export const CAMPAIGN_COMPLETE_RESUME_SEQUENCE = {
-  id: 'campaign-complete-resume',
-  events: [
-    PLAY_ENDING_BGM_EVENT,
-    {
-      type: 'speech',
-      npcId: CAMPAIGN_COMPANION_NPC_ID,
-      text: 'Welcome back to the completed fictional campaign.',
-      durationSeconds: 2.5,
-    },
-    {
-      type: 'wait',
-      durationSeconds: 2,
-    },
-  ],
-} as const satisfies EventSequence;
-
-export const CAMPAIGN_SEGMENT_EVENT_COUNTS = Object.fromEntries(
-  CAMPAIGN_SEGMENT_ORDER.map((segment) => [segment, CAMPAIGN_SEGMENTS[segment].length]),
-) as Readonly<Record<CampaignSegmentKey, number>>;

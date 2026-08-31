@@ -25,6 +25,35 @@ body,
   outline: none;
 }
 
+.startup-error {
+  position: fixed;
+  z-index: 100;
+  inset: 0;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 12px;
+  padding: 32px;
+  background: #18262d;
+  color: #f7f2e8;
+  text-align: center;
+}
+
+.startup-error h1,
+.startup-error p {
+  margin: 0;
+}
+
+.startup-error h1 {
+  font-size: clamp(28px, 6vw, 48px);
+}
+
+.startup-error p {
+  width: min(680px, 100%);
+  color: rgb(247 242 232 / 78%);
+  line-height: 1.6;
+}
+
 .audio-mute {
   position: fixed;
   z-index: 35;

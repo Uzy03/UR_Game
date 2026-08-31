@@ -23,7 +23,11 @@ import {
   PHASE5_HELPER_NPC_ID,
   PHASE5_INITIAL_SCENE_ID,
 } from '../content/demo/phase5Scenes';
-import { PHASE13_CONTENT } from '../content/campaign/campaignContent';
+import {
+  createCampaignContent,
+  type CampaignContentBundle,
+} from '../content/campaign/campaignContent';
+import { loadCampaignStory } from '../content/campaign/loadCampaignStory';
 import { DialogueManager } from '../dialogue/DialogueManager';
 import { EventRunner } from '../events/EventRunner';
 import type { TaskEventBinding } from '../events/TaskEventBinding';
@@ -90,6 +94,7 @@ export class Game {
   private constructor(
     private readonly container: HTMLElement,
     physics: PhysicsWorld,
+    content: CampaignContentBundle,
   ) {
     this.physics = physics;
     this.scene.background = new Color(GAME_CONFIG.renderer.clearColor);
@@ -108,7 +113,6 @@ export class Game {
     );
 
     this.input = new InputManager([new KeyboardInput(window)]);
-    const content = PHASE13_CONTENT;
     const sceneContent = new SceneContentRegistry(content.scenes);
     const initialScene = sceneContent.getScene(content.initialSceneId);
     if (initialScene === undefined) {
@@ -311,8 +315,10 @@ export class Game {
   }
 
   public static async create(container: HTMLElement): Promise<Game> {
+    const story = await loadCampaignStory();
+    const content = createCampaignContent(story);
     const physics = await PhysicsWorld.create(GAME_CONFIG.physics.gravity);
-    return new Game(container, physics);
+    return new Game(container, physics, content);
   }
 
   public start(): void {

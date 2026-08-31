@@ -1,4 +1,5 @@
 import type { CheckpointDefinition } from '../../save/CheckpointTypes';
+import type { CampaignStoryDefinition } from './CampaignStoryTypes';
 import {
   CAMPAIGN_AFTER_MEETING_CHECKPOINT_ID,
   CAMPAIGN_AFTER_OUTING_CHECKPOINT_ID,
@@ -24,16 +25,13 @@ import {
   CAMPAIGN_PREPARATION_PHOTO_ID,
   CAMPAIGN_VIEWPOINT_PHOTO_ID,
 } from './campaignPhoneContent';
-import {
-  CAMPAIGN_AFTER_MEETING_RESUME_SEQUENCE,
-  CAMPAIGN_AFTER_OUTING_RESUME_SEQUENCE,
-  CAMPAIGN_AFTER_PREPARATION_RESUME_SEQUENCE,
-  CAMPAIGN_BEFORE_ENDING_RESUME_SEQUENCE,
-  CAMPAIGN_COMPLETE_RESUME_SEQUENCE,
-  CAMPAIGN_MAIN_SEQUENCE,
-} from './campaignSequences';
+import type { CampaignSequences } from './campaignSequences';
 
-export const CAMPAIGN_CHECKPOINTS = [
+export function createCampaignCheckpoints(
+  story: CampaignStoryDefinition,
+  sequences: CampaignSequences,
+): readonly CheckpointDefinition[] {
+  return [
   {
     id: CAMPAIGN_INITIAL_CHECKPOINT_ID,
     sceneId: CAMPAIGN_BEDROOM_SCENE_ID,
@@ -44,26 +42,26 @@ export const CAMPAIGN_CHECKPOINTS = [
       unlockedMessageIds: [],
       unlockedPhotoIds: [],
     },
-    resumeSequence: CAMPAIGN_MAIN_SEQUENCE,
+    resumeSequence: sequences.main,
   },
   {
     id: CAMPAIGN_AFTER_MEETING_CHECKPOINT_ID,
     sceneId: CAMPAIGN_CAFE_COMPLETE_SCENE_ID,
     phoneProgress: {
       version: 1,
-      storyDate: '2042-04-12',
+      storyDate: story.meeting.date,
       currentObjective: null,
       unlockedMessageIds: [CAMPAIGN_INVITATION_MESSAGE_ID],
       unlockedPhotoIds: [CAMPAIGN_MEETING_PHOTO_ID],
     },
-    resumeSequence: CAMPAIGN_AFTER_MEETING_RESUME_SEQUENCE,
+    resumeSequence: sequences.afterMeeting,
   },
   {
     id: CAMPAIGN_AFTER_OUTING_CHECKPOINT_ID,
     sceneId: CAMPAIGN_PARK_SCENE_ID,
     phoneProgress: {
       version: 1,
-      storyDate: '2042-05-03',
+      storyDate: story.outing.date,
       currentObjective: null,
       unlockedMessageIds: [
         CAMPAIGN_INVITATION_MESSAGE_ID,
@@ -74,14 +72,14 @@ export const CAMPAIGN_CHECKPOINTS = [
         CAMPAIGN_OUTING_PHOTO_ID,
       ],
     },
-    resumeSequence: CAMPAIGN_AFTER_OUTING_RESUME_SEQUENCE,
+    resumeSequence: sequences.afterOuting,
   },
   {
     id: CAMPAIGN_AFTER_PREPARATION_CHECKPOINT_ID,
     sceneId: CAMPAIGN_PREP_COMPLETE_SCENE_ID,
     phoneProgress: {
       version: 1,
-      storyDate: '2042-06-14',
+      storyDate: story.preparation.date,
       currentObjective: null,
       unlockedMessageIds: [
         CAMPAIGN_INVITATION_MESSAGE_ID,
@@ -94,14 +92,14 @@ export const CAMPAIGN_CHECKPOINTS = [
         CAMPAIGN_PREPARATION_PHOTO_ID,
       ],
     },
-    resumeSequence: CAMPAIGN_AFTER_PREPARATION_RESUME_SEQUENCE,
+    resumeSequence: sequences.afterPreparation,
   },
   {
     id: CAMPAIGN_BEFORE_ENDING_CHECKPOINT_ID,
     sceneId: CAMPAIGN_VIEWPOINT_COMPLETE_SCENE_ID,
     phoneProgress: {
       version: 1,
-      storyDate: '2042-07-05',
+      storyDate: story.journey.date,
       currentObjective: null,
       unlockedMessageIds: [
         CAMPAIGN_INVITATION_MESSAGE_ID,
@@ -115,14 +113,14 @@ export const CAMPAIGN_CHECKPOINTS = [
         CAMPAIGN_VIEWPOINT_PHOTO_ID,
       ],
     },
-    resumeSequence: CAMPAIGN_BEFORE_ENDING_RESUME_SEQUENCE,
+    resumeSequence: sequences.beforeEnding,
   },
   {
     id: CAMPAIGN_COMPLETE_CHECKPOINT_ID,
     sceneId: CAMPAIGN_ENDING_SCENE_ID,
     phoneProgress: {
       version: 1,
-      storyDate: '2042-08-09',
+      storyDate: story.ending.date,
       currentObjective: null,
       unlockedMessageIds: [
         CAMPAIGN_INVITATION_MESSAGE_ID,
@@ -138,6 +136,7 @@ export const CAMPAIGN_CHECKPOINTS = [
         CAMPAIGN_ENDING_PHOTO_ID,
       ],
     },
-    resumeSequence: CAMPAIGN_COMPLETE_RESUME_SEQUENCE,
+    resumeSequence: sequences.complete,
   },
-] as const satisfies readonly CheckpointDefinition[];
+  ] satisfies readonly CheckpointDefinition[];
+}

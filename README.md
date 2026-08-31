@@ -1,6 +1,6 @@
-# Anniversary Game — Phase 13
+# Anniversary Game — Phase 14
 
-交際1周年記念の短編3Dゲームに向けた、Webブラウザ用のゲーム基盤です。Phase 13では架空Campaignへ、BGM・短いSE・crossfade・Muteを扱う最小限のAudio基盤を追加しています。
+交際1周年記念の短編3Dゲームに向けた、Webブラウザ用のゲーム基盤です。Phase 14では公開可能な架空Campaignを維持したまま、Git管理外のローカルJSONから個人向けの文章・日付・写真を注入できる基盤を追加しています。
 
 ## 実行
 
@@ -21,6 +21,8 @@ npm run dev
 - `Sound On` / `Sound Off`: 画面右上のボタンでsession中のBGMとSEをMute
 
 起動時のStart Menuで`New Game`を選ぶと、架空の`campaign-bedroom`から始まります。Phone Storyを起点にCafe、Park、Preparation Space、Viewpoint、Ending Roomを順に巡り、Placement、Reach、Processing、Assemblyを一つの物語として体験します。Campaignは6つの安全なCheckpointと段階的なMessage／Photo解放を持ちます。
+
+任意の`public/private/campaign-story.json`が存在すると、ゲーム構造を変えずにCampaignのストーリー本文を差し替えます。設定方法と公開時の注意は[`docs/private-content.md`](docs/private-content.md)を参照してください。ファイルがなければ公開の架空ストーリーを使用し、存在するファイルが不正な場合は画面上の起動エラーで停止します。
 
 各Segmentへ移る前には、架空の日付・タイトル・場所を持つTransition Cardが約2秒表示されます。表示は自動で完了し、skip用の新しい入力はありません。CSSだけで暗転するためThree.jsの描画パイプラインは変更していません。
 
@@ -97,12 +99,15 @@ New Gameのユーザー操作後にMain BGMが始まり、Transition CardとMemo
 - `StartMenu`: 保存状況に応じたNew Game / Continue / ResetのDOM表示
 - `TransitionOverlay`: data-drivenな日付・タイトル・任意subtitleをfull-screen HTML/CSSで表示
 - `AudioMuteButton`: Audio状態やSaveを持たず、Mute切替をHTML buttonとして表示
+- `CampaignStoryDefinition`: 非公開版から差し替え可能な日付・文章・写真パスだけを表す
+- `CampaignStoryValidation`: Story JSONを実行時検証し、外部写真URLや不完全なデータを拒否
+- `loadCampaignStory`: 固定ローカルパスの取得、404時の架空フォールバック、invalid時のfail-closed
 
-CampaignのScene、Phone content、Transition Card、Audio content、canonical Event Sequence、Checkpointは`src/content/campaign/`に分離しています。`campaignContent.ts`は旧Phase 6〜10データとCampaignデータをRegistryへ渡すだけの薄いcontent bundleであり、runtime managerではありません。CheckpointのresumeSequenceはcanonical segment列のsuffixから生成するため、Story本文・Transition Card・Audio CueをCheckpointごとに複製しません。
+CampaignのScene、Phone content、Transition Card、Audio content、canonical Event Sequence、Checkpointは`src/content/campaign/`に分離しています。`campaignContent.ts`は検証済みStoryを固定のCampaign構造へ注入し、旧Phase 6〜10データと合わせてRegistryへ渡す薄いfactoryです。runtime managerではありません。CheckpointのresumeSequenceはcanonical segment列のsuffixから生成するため、Story本文・Transition Card・Audio CueをCheckpointごとに複製しません。
 
-Campaign専用の`Chapter`、`CampaignManager`、新しいTaskは追加していません。Phase 13で追加したGameEventはimmediateな`audio_cue` 1種類だけです。`SceneManager`、`SceneDefinition`、Task、PhoneControllerはAudioを知らず、旧Phase 6〜12のScene・Phone content・Checkpointもv1 Save互換のため登録を維持しています。
+Campaign専用の`Chapter`、`CampaignManager`、新しいTaskは追加していません。Phase 14でもGameEventの種類は増やしていません。`SceneManager`、`SceneDefinition`、Task、PhoneControllerはStory loaderを知らず、旧Phase 6〜12のScene・Phone content・Checkpointもv1 Save互換のため登録を維持しています。
 
-`localStorage`ではGame Saveの`ur-game:save:v1`とPhone進行の`ur-game:phone-progress:v1`を分離しています。Phase 13でも両schemaはv1のままです。current BGM、再生位置、Mute、volume、unlock状態は保存せず、Checkpointのcanonical resume sequenceが適切なBGM Cueを再指定します。
+`localStorage`ではGame Saveの`ur-game:save:v1`とPhone進行の`ur-game:phone-progress:v1`を分離しています。Phase 14でも両schemaはv1のままです。current BGM、再生位置、Mute、volume、unlock状態は保存せず、Checkpointのcanonical resume sequenceが適切なBGM Cueを再指定します。
 
 入力ソースやゲームループの境界を保ち、キーコードは`KeyboardInput`のみに閉じ込めています。アイテムは操作性を優先してDynamicRigidBodyにせず、床・保持・PlacePointへの配置状態を明示的に切り替えています。
 
@@ -118,8 +123,8 @@ npm run generate:audio
 
 ## 公開前のセキュリティ
 
-APIキーや認証情報はソースへ直接書かず、ローカルの `.env` または `private/` に置いてください。これらは `.gitignore` の対象です。
+APIキーや認証情報はソースやStory JSONへ直接書かず、用途に応じた安全なローカル保管を使用してください。`.env`、`private/`、`public/private/`は`.gitignore`の対象です。
 
-個人向けコンテンツは [`config/personal-content.example.json`](config/personal-content.example.json) を雛形とし、実データを `private/personal-content.json` として管理します。`private/` の実データをpublicビルドへimport・コピーしてはいけません。
+個人向けCampaignは[`examples/campaign-story.example.json`](examples/campaign-story.example.json)を雛形とし、実データを`public/private/campaign-story.json`、写真を`public/private/photos/`で管理します。これらを`git add -f`で公開リポジトリへ追加してはいけません。
 
-Viteの `VITE_` 環境変数やTypeScriptの変数は、秘密情報の保管場所ではありません。ビルド後のJavaScriptへ値が埋め込まれます。個人写真、実名、メッセージなどをゲーム本体へ組み込む場合、ブラウザへ配信されたファイルは閲覧・取得できる前提で、公開可能な内容だけを使用してください。個人版が必要な場合は、公開版と分離してローカルでビルドし、生成物を公開リポジトリへ追加しないでください。
+Viteの`public/`、`VITE_`環境変数、TypeScriptの変数は、秘密情報を隠す場所ではありません。ブラウザへ配信されたファイルは閲覧・取得できる前提です。個人版はローカルまたはアクセス制限された配布先だけで扱い、個人データを含む生成物を公開しないでください。詳しくは[`docs/private-content.md`](docs/private-content.md)を参照してください。
