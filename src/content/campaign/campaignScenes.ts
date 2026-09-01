@@ -1,4 +1,5 @@
 import type { SceneDefinition } from '../../scene/SceneTypes';
+import type { CampaignStoryDefinition } from './CampaignStoryTypes';
 import {
   CAMPAIGN_ASSEMBLY_INPUT_A_ID,
   CAMPAIGN_ASSEMBLY_INPUT_B_ID,
@@ -36,6 +37,9 @@ import {
 const PLAYER_GROUNDED_Y = 0.9;
 const NPC_GROUNDED_Y = 0.87;
 
+export function createCampaignScenes(
+  story: CampaignStoryDefinition,
+): readonly SceneDefinition[] {
 const CAMPAIGN_BEDROOM_SCENE = {
   id: CAMPAIGN_BEDROOM_SCENE_ID,
   playerSpawn: {
@@ -143,7 +147,7 @@ const CAMPAIGN_CAFE_SCENE = {
   npcs: [
     {
       id: CAMPAIGN_COMPANION_NPC_ID,
-      displayName: 'Demo Companion',
+      displayName: story.companionDisplayName,
       position: { x: 0, y: NPC_GROUNDED_Y, z: 3.1 },
       moveSpeed: 1.8,
       turnSharpness: 10,
@@ -152,7 +156,7 @@ const CAMPAIGN_CAFE_SCENE = {
   placementTasks: [
     {
       id: CAMPAIGN_CAFE_PLACEMENT_TASK_ID,
-      label: 'Bring both drinks to the cafe table',
+      label: story.meeting.placementTaskLabel,
       durationSeconds: 45,
       requiredItemIds: [CAMPAIGN_CAFE_DRINK_A_ID, CAMPAIGN_CAFE_DRINK_B_ID],
       targetPlacePointIds: [CAMPAIGN_CAFE_PLACE_A_ID, CAMPAIGN_CAFE_PLACE_B_ID],
@@ -233,7 +237,7 @@ const CAMPAIGN_PARK_SCENE = {
   npcs: [
     {
       id: CAMPAIGN_COMPANION_NPC_ID,
-      displayName: 'Demo Companion',
+      displayName: story.companionDisplayName,
       position: { x: 0, y: NPC_GROUNDED_Y, z: 4.8 },
       moveSpeed: 2,
       turnSharpness: 10,
@@ -243,13 +247,13 @@ const CAMPAIGN_PARK_SCENE = {
   reachTasks: [
     {
       id: CAMPAIGN_PARK_FIRST_REACH_TASK_ID,
-      label: 'Walk to the fountain marker',
+      label: story.outing.firstReachTaskLabel,
       targetPosition: { x: -3.2, y: 0.03, z: 0.8 },
       radius: 1.15,
     },
     {
       id: CAMPAIGN_PARK_SECOND_REACH_TASK_ID,
-      label: 'Walk to the lantern overlook',
+      label: story.outing.secondReachTaskLabel,
       targetPosition: { x: 4.5, y: 0.03, z: -4.1 },
       radius: 1.15,
     },
@@ -328,7 +332,7 @@ const CAMPAIGN_PREP_SCENE = {
   npcs: [
     {
       id: CAMPAIGN_COMPANION_NPC_ID,
-      displayName: 'Demo Companion',
+      displayName: story.companionDisplayName,
       position: { x: 0, y: NPC_GROUNDED_Y, z: 3.1 },
       moveSpeed: 1.8,
       turnSharpness: 10,
@@ -337,7 +341,7 @@ const CAMPAIGN_PREP_SCENE = {
   placementTasks: [
     {
       id: CAMPAIGN_PREP_PLACEMENT_TASK_ID,
-      label: 'Bring both prepared items to the right table',
+      label: story.preparation.placementTaskLabel,
       durationSeconds: 45,
       requiredItemIds: [CAMPAIGN_PREP_FRUIT_ID, CAMPAIGN_PREP_PACKET_ID],
       targetPlacePointIds: [CAMPAIGN_PREP_PLACE_A_ID, CAMPAIGN_PREP_PLACE_B_ID],
@@ -358,7 +362,7 @@ const CAMPAIGN_PREP_SCENE = {
   processingTasks: [
     {
       id: CAMPAIGN_PROCESSING_TASK_ID,
-      label: 'Process both picnic items',
+      label: story.preparation.processingTaskLabel,
       requiredItemIds: [CAMPAIGN_PREP_FRUIT_ID, CAMPAIGN_PREP_PACKET_ID],
       stationIds: [CAMPAIGN_PROCESSING_STATION_ID],
       durationSeconds: 55,
@@ -465,7 +469,7 @@ const CAMPAIGN_VIEWPOINT_SCENE = {
   npcs: [
     {
       id: CAMPAIGN_COMPANION_NPC_ID,
-      displayName: 'Demo Companion',
+      displayName: story.companionDisplayName,
       position: { x: 0, y: NPC_GROUNDED_Y, z: 3.1 },
       moveSpeed: 1.8,
       turnSharpness: 10,
@@ -474,7 +478,7 @@ const CAMPAIGN_VIEWPOINT_SCENE = {
   placementTasks: [
     {
       id: CAMPAIGN_VIEWPOINT_PLACEMENT_TASK_ID,
-      label: 'Bring the finished bundle to the overlook table',
+      label: story.journey.placementTaskLabel,
       durationSeconds: 45,
       requiredItemIds: [CAMPAIGN_ASSEMBLY_OUTPUT_ID],
       targetPlacePointIds: [CAMPAIGN_VIEWPOINT_PLACE_ID],
@@ -496,7 +500,7 @@ const CAMPAIGN_VIEWPOINT_SCENE = {
   assemblyTasks: [
     {
       id: CAMPAIGN_ASSEMBLY_TASK_ID,
-      label: 'Combine the two viewpoint components',
+      label: story.journey.assemblyTaskLabel,
       stationIds: [CAMPAIGN_ASSEMBLY_STATION_ID],
       durationSeconds: 55,
       attemptPlayerPosition: { x: 0, y: PLAYER_GROUNDED_Y, z: 5.7 },
@@ -571,7 +575,7 @@ const CAMPAIGN_ENDING_SCENE = {
   npcs: [
     {
       id: CAMPAIGN_COMPANION_NPC_ID,
-      displayName: 'Demo Companion',
+      displayName: story.companionDisplayName,
       position: { x: 0, y: NPC_GROUNDED_Y, z: 2.4 },
       moveSpeed: 1.8,
       turnSharpness: 10,
@@ -580,7 +584,7 @@ const CAMPAIGN_ENDING_SCENE = {
   placementTasks: [],
 } as const satisfies SceneDefinition;
 
-export const CAMPAIGN_SCENES = [
+return [
   CAMPAIGN_BEDROOM_SCENE,
   CAMPAIGN_CAFE_SCENE,
   CAMPAIGN_CAFE_COMPLETE_SCENE,
@@ -591,3 +595,4 @@ export const CAMPAIGN_SCENES = [
   CAMPAIGN_VIEWPOINT_COMPLETE_SCENE,
   CAMPAIGN_ENDING_SCENE,
 ] as const satisfies readonly SceneDefinition[];
+}

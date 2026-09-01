@@ -62,6 +62,10 @@ try {
   privateStory.meeting.date = '2098-10-01';
   privateStory.meeting.dialogueIntro[0].text = 'LOCAL PRIVATE TEST DIALOGUE';
   privateStory.meeting.photo.src = '/private/photos/test-memory.jpg';
+  privateStory.outing.photo.src = '/private/photos/test-outing.jpg';
+  privateStory.preparation.photo.src = '/private/photos/test-preparation.jpg';
+  privateStory.journey.photo.src = '/private/photos/test-journey.jpg';
+  privateStory.ending.photo.src = '/private/photos/test-ending.jpg';
   const loadedPrivate = await loadCampaignStory(async () => response(200, privateStory));
   assert.equal(loadedPrivate.phoneThreadTitle, 'LOCAL PRIVATE TEST THREAD');
 

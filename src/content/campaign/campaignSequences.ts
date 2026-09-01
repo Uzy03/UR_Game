@@ -117,7 +117,7 @@ export function createCampaignSequences(
       type: 'set_objective',
       objective: {
         id: 'campaign-check-phone',
-        text: 'Check the fictional story on your phone.',
+        text: story.prologue.checkPhoneObjectiveText,
       },
     },
     {
@@ -136,7 +136,7 @@ export function createCampaignSequences(
       type: 'set_objective',
       objective: {
         id: 'campaign-meet-at-cafe',
-        text: 'Meet Demo Companion at Lantern Cafe.',
+        text: story.prologue.meetObjectiveText,
       },
     },
     PLAY_TRANSITION_SFX_EVENT,
@@ -161,7 +161,7 @@ export function createCampaignSequences(
       type: 'set_objective',
       objective: {
         id: 'campaign-serve-drinks',
-        text: 'Bring both drinks to the cafe table.',
+        text: story.meeting.placementObjectiveText,
       },
     },
     {
@@ -220,7 +220,7 @@ export function createCampaignSequences(
       type: 'set_objective',
       objective: {
         id: 'campaign-reach-fountain',
-        text: 'Walk to the fountain marker.',
+        text: story.outing.firstReachObjectiveText,
       },
     },
     {
@@ -243,7 +243,7 @@ export function createCampaignSequences(
       type: 'set_objective',
       objective: {
         id: 'campaign-reach-overlook',
-        text: 'Walk to the lantern overlook.',
+        text: story.outing.secondReachObjectiveText,
       },
     },
     {
@@ -301,7 +301,7 @@ export function createCampaignSequences(
       type: 'set_objective',
       objective: {
         id: 'campaign-process-items',
-        text: 'Process both picnic items.',
+        text: story.preparation.processingObjectiveText,
       },
     },
     {
@@ -319,7 +319,7 @@ export function createCampaignSequences(
       type: 'set_objective',
       objective: {
         id: 'campaign-place-prepared-items',
-        text: 'Bring both prepared items to the right table.',
+        text: story.preparation.placementObjectiveText,
       },
     },
     {
@@ -377,7 +377,7 @@ export function createCampaignSequences(
       type: 'set_objective',
       objective: {
         id: 'campaign-combine-components',
-        text: 'Combine the two viewpoint components.',
+        text: story.journey.assemblyObjectiveText,
       },
     },
     {
@@ -395,7 +395,7 @@ export function createCampaignSequences(
       type: 'set_objective',
       objective: {
         id: 'campaign-deliver-bundle',
-        text: 'Bring the finished bundle to the overlook table.',
+        text: story.journey.placementObjectiveText,
       },
     },
     {

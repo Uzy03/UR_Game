@@ -1,9 +1,12 @@
 import type { CampaignStoryDefinition } from './CampaignStoryTypes';
 
 export const FICTIONAL_CAMPAIGN_STORY = {
+  companionDisplayName: 'Demo Companion',
   phoneThreadTitle: 'Demo Companion',
   prologue: {
     date: '2042-04-12',
+    checkPhoneObjectiveText: 'Check the fictional story on your phone.',
+    meetObjectiveText: 'Meet Demo Companion at Lantern Cafe.',
     connectionCard: {
       appLabel: 'Daylight',
       title: 'A new fictional connection',
@@ -26,6 +29,8 @@ export const FICTIONAL_CAMPAIGN_STORY = {
   },
   meeting: {
     date: '2042-04-12',
+    placementObjectiveText: 'Bring both drinks to the cafe table.',
+    placementTaskLabel: 'Bring both drinks to the cafe table',
     transition: {
       eyebrow: '2042.04.12',
       title: 'First Demo Meeting',
@@ -48,6 +53,10 @@ export const FICTIONAL_CAMPAIGN_STORY = {
   },
   outing: {
     date: '2042-05-03',
+    firstReachObjectiveText: 'Walk to the fountain marker.',
+    firstReachTaskLabel: 'Walk to the fountain marker',
+    secondReachObjectiveText: 'Walk to the lantern overlook.',
+    secondReachTaskLabel: 'Walk to the lantern overlook',
     transition: {
       eyebrow: '2042.05.03',
       title: 'A Quiet Walk',
@@ -77,6 +86,10 @@ export const FICTIONAL_CAMPAIGN_STORY = {
   },
   preparation: {
     date: '2042-06-14',
+    processingObjectiveText: 'Process both picnic items.',
+    processingTaskLabel: 'Process both picnic items',
+    placementObjectiveText: 'Bring both prepared items to the right table.',
+    placementTaskLabel: 'Bring both prepared items to the right table',
     transition: {
       eyebrow: '2042.06.14',
       title: 'Getting Ready',
@@ -106,6 +119,10 @@ export const FICTIONAL_CAMPAIGN_STORY = {
   },
   journey: {
     date: '2042-07-05',
+    assemblyObjectiveText: 'Combine the two viewpoint components.',
+    assemblyTaskLabel: 'Combine the two viewpoint components',
+    placementObjectiveText: 'Bring the finished bundle to the overlook table.',
+    placementTaskLabel: 'Bring the finished bundle to the overlook table',
     transition: {
       eyebrow: '2042.07.05',
       title: 'A Small Journey',

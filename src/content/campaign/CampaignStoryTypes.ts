@@ -30,15 +30,20 @@ export interface StoryTransitionContent {
 export type StoryDialogueLines = readonly DialogueLine[];
 
 export interface CampaignStoryDefinition {
+  readonly companionDisplayName: string;
   readonly phoneThreadTitle: string;
   readonly prologue: {
     readonly date: string;
+    readonly checkPhoneObjectiveText: string;
+    readonly meetObjectiveText: string;
     readonly connectionCard: StoryPhoneCardText;
     readonly invitationCard: StoryPhoneCardText;
     readonly invitationMessage: StoryMessageContent;
   };
   readonly meeting: {
     readonly date: string;
+    readonly placementObjectiveText: string;
+    readonly placementTaskLabel: string;
     readonly transition: StoryTransitionContent;
     readonly dialogueIntro: StoryDialogueLines;
     readonly dialogueOutro: StoryDialogueLines;
@@ -46,6 +51,10 @@ export interface CampaignStoryDefinition {
   };
   readonly outing: {
     readonly date: string;
+    readonly firstReachObjectiveText: string;
+    readonly firstReachTaskLabel: string;
+    readonly secondReachObjectiveText: string;
+    readonly secondReachTaskLabel: string;
     readonly transition: StoryTransitionContent;
     readonly dialogueIntro: StoryDialogueLines;
     readonly dialogueMiddle: StoryDialogueLines;
@@ -55,6 +64,10 @@ export interface CampaignStoryDefinition {
   };
   readonly preparation: {
     readonly date: string;
+    readonly processingObjectiveText: string;
+    readonly processingTaskLabel: string;
+    readonly placementObjectiveText: string;
+    readonly placementTaskLabel: string;
     readonly transition: StoryTransitionContent;
     readonly dialogueIntro: StoryDialogueLines;
     readonly dialogueReady: StoryDialogueLines;
@@ -64,6 +77,10 @@ export interface CampaignStoryDefinition {
   };
   readonly journey: {
     readonly date: string;
+    readonly assemblyObjectiveText: string;
+    readonly assemblyTaskLabel: string;
+    readonly placementObjectiveText: string;
+    readonly placementTaskLabel: string;
     readonly transition: StoryTransitionContent;
     readonly dialogueIntro: StoryDialogueLines;
     readonly dialogueReady: StoryDialogueLines;

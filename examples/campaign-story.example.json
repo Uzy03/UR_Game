@@ -1,7 +1,10 @@
 {
+  "companionDisplayName": "Private Test Companion",
   "phoneThreadTitle": "Private Test Companion",
   "prologue": {
     "date": "2099-01-10",
+    "checkPhoneObjectiveText": "Check the private test story on your phone.",
+    "meetObjectiveText": "Meet Private Test Companion at Test Cafe.",
     "connectionCard": {
       "appLabel": "Test App",
       "title": "A private test connection",
@@ -24,6 +27,8 @@
   },
   "meeting": {
     "date": "2099-01-10",
+    "placementObjectiveText": "Bring both test drinks to the test table.",
+    "placementTaskLabel": "Bring both test drinks to the test table",
     "transition": {
       "eyebrow": "2099.01.10",
       "title": "Private Test Meeting",
@@ -46,7 +51,7 @@
       }
     ],
     "photo": {
-      "src": "/campaign/memory-01.svg",
+      "src": "/private/photos/memory-01.svg",
       "alt": "A fictional private test photo description",
       "caption": "Private test memory 1",
       "date": "2099-01-10"
@@ -54,6 +59,10 @@
   },
   "outing": {
     "date": "2099-02-14",
+    "firstReachObjectiveText": "Walk to the first private test marker.",
+    "firstReachTaskLabel": "Walk to the first private test marker",
+    "secondReachObjectiveText": "Walk to the second private test marker.",
+    "secondReachTaskLabel": "Walk to the second private test marker",
     "transition": {
       "eyebrow": "2099.02.14",
       "title": "Private Test Outing",
@@ -83,7 +92,7 @@
       "timeLabel": "14:00"
     },
     "photo": {
-      "src": "/campaign/memory-02.svg",
+      "src": "/private/photos/memory-02.svg",
       "alt": "A second fictional private test photo description",
       "caption": "Private test memory 2",
       "date": "2099-02-14"
@@ -91,6 +100,10 @@
   },
   "preparation": {
     "date": "2099-03-20",
+    "processingObjectiveText": "Process both private test items.",
+    "processingTaskLabel": "Process both private test items",
+    "placementObjectiveText": "Bring both prepared test items to the table.",
+    "placementTaskLabel": "Bring both prepared test items to the table",
     "transition": {
       "eyebrow": "2099.03.20",
       "title": "Private Test Preparation",
@@ -120,7 +133,7 @@
       "timeLabel": "16:00"
     },
     "photo": {
-      "src": "/campaign/memory-03.svg",
+      "src": "/private/photos/memory-03.svg",
       "alt": "A third fictional private test photo description",
       "caption": "Private test memory 3",
       "date": "2099-03-20"
@@ -128,6 +141,10 @@
   },
   "journey": {
     "date": "2099-04-25",
+    "assemblyObjectiveText": "Combine the two private test components.",
+    "assemblyTaskLabel": "Combine the two private test components",
+    "placementObjectiveText": "Bring the private test bundle to the table.",
+    "placementTaskLabel": "Bring the private test bundle to the table",
     "transition": {
       "eyebrow": "2099.04.25",
       "title": "Private Test Journey",
@@ -152,7 +169,7 @@
       }
     ],
     "photo": {
-      "src": "/campaign/memory-04.svg",
+      "src": "/private/photos/memory-04.svg",
       "alt": "A fourth fictional private test photo description",
       "caption": "Private test memory 4",
       "date": "2099-04-25"
@@ -190,7 +207,7 @@
       "timeLabel": "20:00"
     },
     "photo": {
-      "src": "/campaign/ending.svg",
+      "src": "/private/photos/ending.svg",
       "alt": "A fictional private test finale photo description",
       "caption": "Private test finale",
       "date": "2099-05-30"

@@ -38,7 +38,9 @@ export async function loadCampaignStory(
   }
 
   try {
-    return parseCampaignStoryDefinition(value);
+    return parseCampaignStoryDefinition(value, {
+      photoPathPolicy: 'private-photos-only',
+    });
   } catch (error: unknown) {
     const detail = error instanceof Error ? error.message : 'unknown validation error';
     throw new Error(`Private Campaign Story is invalid: ${detail}`);

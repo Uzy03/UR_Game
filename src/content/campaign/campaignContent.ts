@@ -15,7 +15,7 @@ import {
 } from './campaignIds';
 import { createCampaignPhoneContent } from './campaignPhoneContent';
 import { createCampaignPhoneStory } from './campaignPhoneStory';
-import { CAMPAIGN_SCENES } from './campaignScenes';
+import { createCampaignScenes } from './campaignScenes';
 import { createCampaignSequences } from './campaignSequences';
 import { createCampaignTransitionCards } from './campaignTransitionCards';
 
@@ -34,6 +34,7 @@ export function createCampaignContent(
 ): CampaignContentBundle {
   const story = parseCampaignStoryDefinition(storyDefinition);
   const campaignPhoneContent = createCampaignPhoneContent(story);
+  const campaignScenes = createCampaignScenes(story);
   const phoneStory = createCampaignPhoneStory(story);
   const transitions = createCampaignTransitionCards(story);
   const sequences = createCampaignSequences(story, phoneStory, transitions);
@@ -42,7 +43,7 @@ export function createCampaignContent(
   return {
     scenes: [
       ...PHASE10_SCENES,
-      ...CAMPAIGN_SCENES,
+      ...campaignScenes,
     ],
     checkpoints: [
       ...PHASE10_CHECKPOINTS,

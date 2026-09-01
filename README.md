@@ -1,6 +1,6 @@
-# Anniversary Game — Phase 14
+# Anniversary Game — Phase 15
 
-交際1周年記念の短編3Dゲームに向けた、Webブラウザ用のゲーム基盤です。Phase 14では公開可能な架空Campaignを維持したまま、Git管理外のローカルJSONから個人向けの文章・日付・写真を注入できる基盤を追加しています。
+交際1周年記念の短編3Dゲームに向けた、Webブラウザ用のゲーム基盤です。Phase 15では、NPC名・Objective・Task HUDを含むCampaign上の物語表示を、Git管理外のローカルJSONから差し替えられる状態までprivate content境界を完成させています。
 
 ## 実行
 
@@ -9,7 +9,7 @@ npm install
 npm run dev
 ```
 
-型チェックを含む本番ビルドは `npm run build`、ビルド結果の確認は `npm run preview` で行えます。
+型チェックを含む本番ビルドは`npm run build`、Phase 15のブラウザ非依存検証は`npm run validate:phase15`、ビルド結果の確認は`npm run preview`で行えます。
 
 ## 操作
 
@@ -22,7 +22,7 @@ npm run dev
 
 起動時のStart Menuで`New Game`を選ぶと、架空の`campaign-bedroom`から始まります。Phone Storyを起点にCafe、Park、Preparation Space、Viewpoint、Ending Roomを順に巡り、Placement、Reach、Processing、Assemblyを一つの物語として体験します。Campaignは6つの安全なCheckpointと段階的なMessage／Photo解放を持ちます。
 
-任意の`public/private/campaign-story.json`が存在すると、ゲーム構造を変えずにCampaignのストーリー本文を差し替えます。設定方法と公開時の注意は[`docs/private-content.md`](docs/private-content.md)を参照してください。ファイルがなければ公開の架空ストーリーを使用し、存在するファイルが不正な場合は画面上の起動エラーで停止します。
+任意の`public/private/campaign-story.json`が存在すると、ゲーム構造を変えずにCampaignのストーリー本文、NPC名、Objective、Task HUDを差し替えます。private写真は`/private/photos/`配下だけを許可します。設定方法と公開時の注意は[`docs/private-content.md`](docs/private-content.md)を参照してください。ファイルがなければ公開の架空ストーリーを使用し、存在するファイルが不正な場合は画面上の起動エラーで停止します。
 
 各Segmentへ移る前には、架空の日付・タイトル・場所を持つTransition Cardが約2秒表示されます。表示は自動で完了し、skip用の新しい入力はありません。CSSだけで暗転するためThree.jsの描画パイプラインは変更していません。
 
@@ -99,15 +99,16 @@ New Gameのユーザー操作後にMain BGMが始まり、Transition CardとMemo
 - `StartMenu`: 保存状況に応じたNew Game / Continue / ResetのDOM表示
 - `TransitionOverlay`: data-drivenな日付・タイトル・任意subtitleをfull-screen HTML/CSSで表示
 - `AudioMuteButton`: Audio状態やSaveを持たず、Mute切替をHTML buttonとして表示
-- `CampaignStoryDefinition`: 非公開版から差し替え可能な日付・文章・写真パスだけを表す
-- `CampaignStoryValidation`: Story JSONを実行時検証し、外部写真URLや不完全なデータを拒否
+- `CampaignStoryDefinition`: NPC名・Objective・Task labelを含む、差し替え可能な物語表示だけを表す
+- `CampaignStoryValidation`: Story JSONを実行時検証し、外部URL・encoded traversal・不完全なデータを拒否
 - `loadCampaignStory`: 固定ローカルパスの取得、404時の架空フォールバック、invalid時のfail-closed
+- `createCampaignScenes`: Story由来のNPC名とTask labelを、固定Scene geometry・Task条件へ注入
 
 CampaignのScene、Phone content、Transition Card、Audio content、canonical Event Sequence、Checkpointは`src/content/campaign/`に分離しています。`campaignContent.ts`は検証済みStoryを固定のCampaign構造へ注入し、旧Phase 6〜10データと合わせてRegistryへ渡す薄いfactoryです。runtime managerではありません。CheckpointのresumeSequenceはcanonical segment列のsuffixから生成するため、Story本文・Transition Card・Audio CueをCheckpointごとに複製しません。
 
-Campaign専用の`Chapter`、`CampaignManager`、新しいTaskは追加していません。Phase 14でもGameEventの種類は増やしていません。`SceneManager`、`SceneDefinition`、Task、PhoneControllerはStory loaderを知らず、旧Phase 6〜12のScene・Phone content・Checkpointもv1 Save互換のため登録を維持しています。
+Campaign専用の`Chapter`、`CampaignManager`、新しいTaskは追加していません。Phase 15でもGameEventの種類は増やしていません。`SceneManager`、`SceneDefinition`、Task、PhoneControllerはStory loaderを知らず、旧Phase 6〜12のScene・Phone content・Checkpointもv1 Save互換のため登録を維持しています。
 
-`localStorage`ではGame Saveの`ur-game:save:v1`とPhone進行の`ur-game:phone-progress:v1`を分離しています。Phase 14でも両schemaはv1のままです。current BGM、再生位置、Mute、volume、unlock状態は保存せず、Checkpointのcanonical resume sequenceが適切なBGM Cueを再指定します。
+`localStorage`ではGame Saveの`ur-game:save:v1`とPhone進行の`ur-game:phone-progress:v1`を分離しています。Phase 15でも両schemaはv1のままです。current BGM、再生位置、Mute、volume、unlock状態は保存せず、Checkpointのcanonical resume sequenceが適切なBGM Cueを再指定します。
 
 入力ソースやゲームループの境界を保ち、キーコードは`KeyboardInput`のみに閉じ込めています。アイテムは操作性を優先してDynamicRigidBodyにせず、床・保持・PlacePointへの配置状態を明示的に切り替えています。
 
