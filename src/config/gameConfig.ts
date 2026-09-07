@@ -1,15 +1,24 @@
-export interface Vector3Config {
-  readonly x: number;
-  readonly y: number;
-  readonly z: number;
-}
+import type {
+  StageObstacleDefinition,
+  StagePickableItemDefinition,
+  StagePlacePointDefinition,
+} from '../stage/StageTypes';
 
-export interface StageObstacleConfig {
-  readonly kind: 'table' | 'box';
-  readonly position: Vector3Config;
-  readonly size: Vector3Config;
-  readonly color: number;
-}
+export type {
+  StageObstacleDefinition as StageObstacleConfig,
+  StagePickableItemDefinition as StagePickableItemConfig,
+  StagePlacePointDefinition as StagePlacePointConfig,
+  Vector3Config,
+} from '../stage/StageTypes';
+
+const PLAYER_COLLIDER_RADIUS = 0.42;
+const PLAYER_COLLIDER_HALF_HEIGHT = 0.45;
+const CHARACTER_OFFSET = 0.03;
+const PLAYER_GROUNDED_Y = (
+  PLAYER_COLLIDER_RADIUS
+  + PLAYER_COLLIDER_HALF_HEIGHT
+  + CHARACTER_OFFSET
+);
 
 export const GAME_CONFIG = {
   loop: {
@@ -19,19 +28,31 @@ export const GAME_CONFIG = {
     maxPixelRatio: 2,
     clearColor: 0xb9d9e8,
   },
+  audio: {
+    defaultBgmFadeSeconds: 0.8,
+  },
   physics: {
     gravity: { x: 0, y: -9.81, z: 0 },
-    characterOffset: 0.03,
-    groundProbeSpeed: 3,
+    characterOffset: CHARACTER_OFFSET,
+    // Snap-to-ground needs only a slight downward component; a gravity-sized probe can penetrate the floor.
+    groundProbeSpeed: 0.006,
   },
   player: {
-    spawn: { x: 0, y: 0.87, z: 4.1 },
+    spawn: { x: 0, y: PLAYER_GROUNDED_Y, z: 4.1 },
     speed: 4.4,
     turnSharpness: 14,
     collider: {
-      radius: 0.42,
-      halfHeight: 0.45,
+      radius: PLAYER_COLLIDER_RADIUS,
+      halfHeight: PLAYER_COLLIDER_HALF_HEIGHT,
     },
+  },
+  npc: {
+    id: 'helper-npc',
+    displayName: 'Helper',
+    spawn: { x: 0, y: 0.87, z: 5.5 },
+    taskPosition: { x: -1.35, y: 0.87, z: 5.5 },
+    moveSpeed: 1.8,
+    turnSharpness: 10,
   },
   camera: {
     fov: 38,
@@ -41,6 +62,41 @@ export const GAME_CONFIG = {
     lookAtOffset: { x: 0, y: 0.55, z: 0 },
     positionSharpness: 5.5,
     lookAtSharpness: 8,
+  },
+  interaction: {
+    maxDistance: 1.65,
+    minForwardDot: 0.2,
+    facingPenalty: 0.85,
+    floorDropDistance: 0.9,
+    floorItemSpacing: 0.08,
+  },
+  phase2: {
+    taskDurationSeconds: 45,
+    retryPlayerPosition: { x: 0, y: PLAYER_GROUNDED_Y, z: 4.1 },
+    retryPlayerFacing: 0,
+    successSpeech: 'We did it!',
+    speechDurationSeconds: 2.5,
+    introDialogue: {
+      id: 'phase-2-intro',
+      lines: [
+        { speaker: 'Helper', text: 'Could you give me a hand?' },
+        { speaker: 'Helper', text: 'Please carry these three items to the green counter.' },
+        { speaker: 'Helper', text: 'Try to finish before time runs out!' },
+      ],
+    },
+    placementTask: {
+      id: 'counter-delivery',
+      label: 'Carry all 3 items to the green counter',
+      requiredItemIds: ['tomato-1', 'parcel-1', 'plate-1'],
+      targetPlacePointIds: [
+        'green-counter-left',
+        'green-counter-center',
+        'green-counter-right',
+      ],
+    },
+  },
+  phase3: {
+    successResultDurationSeconds: 0.9,
   },
   stage: {
     width: 18,
@@ -79,6 +135,41 @@ export const GAME_CONFIG = {
         size: { x: 0.9, y: 0.9, z: 0.9 },
         color: 0x7da7cf,
       },
-    ] satisfies readonly StageObstacleConfig[],
+    ] satisfies readonly StageObstacleDefinition[],
+    items: [
+      {
+        id: 'tomato-1',
+        kind: 'tomato',
+        position: { x: -2.4, y: 0, z: 3.9 },
+      },
+      {
+        id: 'parcel-1',
+        kind: 'box',
+        position: { x: 1.55, y: 0, z: 2.55 },
+      },
+      {
+        id: 'plate-1',
+        kind: 'plate',
+        position: { x: -1.8, y: 0, z: 2.5 },
+      },
+    ] satisfies readonly StagePickableItemDefinition[],
+    placePoints: [
+      {
+        id: 'wood-table-point',
+        position: { x: -3.6, y: 1.515, z: -1.5 },
+      },
+      {
+        id: 'green-counter-left',
+        position: { x: 2.75, y: 1.415, z: 2 },
+      },
+      {
+        id: 'green-counter-center',
+        position: { x: 3.5, y: 1.415, z: 2 },
+      },
+      {
+        id: 'green-counter-right',
+        position: { x: 4.25, y: 1.415, z: 2 },
+      },
+    ] satisfies readonly StagePlacePointDefinition[],
   },
 } as const;

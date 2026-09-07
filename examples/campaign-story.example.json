@@ -1,0 +1,218 @@
+{
+  "companionDisplayName": "Private Test Companion",
+  "phoneThreadTitle": "Private Test Companion",
+  "prologue": {
+    "date": "2099-01-10",
+    "checkPhoneObjectiveText": "Check the private test story on your phone.",
+    "meetObjectiveText": "Meet Private Test Companion at Test Cafe.",
+    "connectionCard": {
+      "appLabel": "Test App",
+      "title": "A private test connection",
+      "subtitle": "Private Test Companion",
+      "body": "Replace this fictional example with content that stays on your machine.",
+      "actionLabel": "Read test card"
+    },
+    "invitationCard": {
+      "appLabel": "Test App",
+      "title": "Meet at the test cafe?",
+      "subtitle": "Private Test Companion",
+      "body": "This fictional invitation demonstrates the private content format.",
+      "actionLabel": "Start test story"
+    },
+    "invitationMessage": {
+      "sender": "Private Test Companion",
+      "text": "This is a fictional message from the private content example.",
+      "timeLabel": "09:00"
+    }
+  },
+  "meeting": {
+    "date": "2099-01-10",
+    "placementObjectiveText": "Bring both test drinks to the test table.",
+    "placementTaskLabel": "Bring both test drinks to the test table",
+    "transition": {
+      "eyebrow": "2099.01.10",
+      "title": "Private Test Meeting",
+      "subtitle": "Test Cafe"
+    },
+    "dialogueIntro": [
+      {
+        "speaker": "Private Test Companion",
+        "text": "This fictional line came from the local private story file."
+      },
+      {
+        "speaker": "Player",
+        "text": "The public game mechanics and IDs remain unchanged."
+      }
+    ],
+    "dialogueOutro": [
+      {
+        "speaker": "Private Test Companion",
+        "text": "The first private-content test is complete."
+      }
+    ],
+    "photo": {
+      "src": "/private/photos/memory-01.svg",
+      "alt": "A fictional private test photo description",
+      "caption": "Private test memory 1",
+      "date": "2099-01-10"
+    }
+  },
+  "outing": {
+    "date": "2099-02-14",
+    "firstReachObjectiveText": "Walk to the first private test marker.",
+    "firstReachTaskLabel": "Walk to the first private test marker",
+    "secondReachObjectiveText": "Walk to the second private test marker.",
+    "secondReachTaskLabel": "Walk to the second private test marker",
+    "transition": {
+      "eyebrow": "2099.02.14",
+      "title": "Private Test Outing",
+      "subtitle": "Test Park"
+    },
+    "dialogueIntro": [
+      {
+        "speaker": "Private Test Companion",
+        "text": "Let us walk to the first fictional marker."
+      }
+    ],
+    "dialogueMiddle": [
+      {
+        "speaker": "Player",
+        "text": "The second marker still uses the fixed public task."
+      }
+    ],
+    "dialogueOutro": [
+      {
+        "speaker": "Private Test Companion",
+        "text": "The private test outing is complete."
+      }
+    ],
+    "message": {
+      "sender": "Private Test Companion",
+      "text": "A fictional private test outing message.",
+      "timeLabel": "14:00"
+    },
+    "photo": {
+      "src": "/private/photos/memory-02.svg",
+      "alt": "A second fictional private test photo description",
+      "caption": "Private test memory 2",
+      "date": "2099-02-14"
+    }
+  },
+  "preparation": {
+    "date": "2099-03-20",
+    "processingObjectiveText": "Process both private test items.",
+    "processingTaskLabel": "Process both private test items",
+    "placementObjectiveText": "Bring both prepared test items to the table.",
+    "placementTaskLabel": "Bring both prepared test items to the table",
+    "transition": {
+      "eyebrow": "2099.03.20",
+      "title": "Private Test Preparation",
+      "subtitle": "Test Preparation Space"
+    },
+    "dialogueIntro": [
+      {
+        "speaker": "Private Test Companion",
+        "text": "Prepare the two fictional items using the fixed public stations."
+      }
+    ],
+    "dialogueReady": [
+      {
+        "speaker": "Player",
+        "text": "Both test items are ready."
+      }
+    ],
+    "dialogueOutro": [
+      {
+        "speaker": "Private Test Companion",
+        "text": "The private test preparation is complete."
+      }
+    ],
+    "message": {
+      "sender": "Private Test Companion",
+      "text": "A fictional private test preparation message.",
+      "timeLabel": "16:00"
+    },
+    "photo": {
+      "src": "/private/photos/memory-03.svg",
+      "alt": "A third fictional private test photo description",
+      "caption": "Private test memory 3",
+      "date": "2099-03-20"
+    }
+  },
+  "journey": {
+    "date": "2099-04-25",
+    "assemblyObjectiveText": "Combine the two private test components.",
+    "assemblyTaskLabel": "Combine the two private test components",
+    "placementObjectiveText": "Bring the private test bundle to the table.",
+    "placementTaskLabel": "Bring the private test bundle to the table",
+    "transition": {
+      "eyebrow": "2099.04.25",
+      "title": "Private Test Journey",
+      "subtitle": "Test Viewpoint"
+    },
+    "dialogueIntro": [
+      {
+        "speaker": "Private Test Companion",
+        "text": "Combine the fictional components at the fixed public station."
+      }
+    ],
+    "dialogueReady": [
+      {
+        "speaker": "Player",
+        "text": "The fictional bundle is ready."
+      }
+    ],
+    "dialogueOutro": [
+      {
+        "speaker": "Private Test Companion",
+        "text": "The private test journey is complete."
+      }
+    ],
+    "photo": {
+      "src": "/private/photos/memory-04.svg",
+      "alt": "A fourth fictional private test photo description",
+      "caption": "Private test memory 4",
+      "date": "2099-04-25"
+    }
+  },
+  "ending": {
+    "date": "2099-05-30",
+    "transition": {
+      "eyebrow": "2099.05.30",
+      "title": "Private Test Finale",
+      "subtitle": "Test Ending Room"
+    },
+    "card": {
+      "appLabel": "Test Keepsake",
+      "title": "Five private test memories saved",
+      "subtitle": "Fictional private example complete",
+      "body": "This fictional card demonstrates the ending content format.",
+      "actionLabel": "View test finale"
+    },
+    "dialogueIntro": [
+      {
+        "speaker": "Private Test Companion",
+        "text": "The private test album now contains every fictional memory."
+      }
+    ],
+    "dialogueFinal": [
+      {
+        "speaker": "Player",
+        "text": "The private story changed without changing public game mechanics."
+      }
+    ],
+    "message": {
+      "sender": "Private Test Companion",
+      "text": "Thanks for completing this fictional private content example.",
+      "timeLabel": "20:00"
+    },
+    "photo": {
+      "src": "/private/photos/ending.svg",
+      "alt": "A fictional private test finale photo description",
+      "caption": "Private test finale",
+      "date": "2099-05-30"
+    },
+    "completionSpeech": "Private test campaign complete!",
+    "resumeSpeech": "Welcome back to the completed private test campaign."
+  }
+}

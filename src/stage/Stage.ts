@@ -4,51 +4,146 @@ import {
   Group,
   Mesh,
   MeshStandardMaterial,
-  type Scene,
+  type Object3D,
 } from 'three';
-import type { StageObstacleConfig } from '../config/gameConfig';
-import type { PhysicsWorld } from '../physics/PhysicsWorld';
+import { disposeObject3D } from '../core/disposeObject3D';
+import { PickableItem } from '../interaction/PickableItem';
+import { PlacePoint } from '../interaction/PlacePoint';
+import type { PhysicsBodyHandle, PhysicsWorld } from '../physics/PhysicsWorld';
+import type { StageDefinition, StageObstacleDefinition } from './StageTypes';
 
-interface StageOptions {
-  readonly width: number;
-  readonly depth: number;
-  readonly floorThickness: number;
-  readonly wallThickness: number;
-  readonly wallHeight: number;
-  readonly obstacles: readonly StageObstacleConfig[];
-}
-
-const FLOOR_COLOR = 0xf1e8d7;
-const WALL_COLOR = 0x8bb8b4;
 const TABLE_LEG_DARKEN = 0.15;
 
 export class Stage {
   public readonly object = new Group();
+  public readonly pickableItems: readonly PickableItem[];
+  public readonly placePoints: readonly PlacePoint[];
+  private readonly physicsHandles: PhysicsBodyHandle[] = [];
+  private disposed = false;
 
   public constructor(
-    scene: Scene,
+    parent: Object3D,
     physics: PhysicsWorld,
-    options: StageOptions,
+    private readonly options: StageDefinition,
   ) {
     this.object.name = 'Stage';
-    scene.add(this.object);
+    parent.add(this.object);
 
-    this.createFloor(physics, options);
-    this.createWalls(physics, options);
+    try {
+      this.createFloor(physics, options);
+      this.createWalls(physics, options);
 
-    for (const obstacle of options.obstacles) {
-      this.createObstacle(physics, obstacle);
+      for (const obstacle of options.obstacles) {
+        this.createObstacle(physics, obstacle);
+      }
+
+      this.pickableItems = options.items.map((item) => new PickableItem({
+        id: item.id,
+        kind: item.kind,
+        position: item.position,
+        parent: this.object,
+        initialProcessingState: item.initialProcessingState,
+        initialActive: item.initialActive,
+      }));
+      this.placePoints = options.placePoints.map((placePoint) => new PlacePoint({
+        id: placePoint.id,
+        position: placePoint.position,
+        parent: this.object,
+      }));
+    } catch (error: unknown) {
+      this.pickableItems = [];
+      this.placePoints = [];
+      this.dispose();
+      throw error;
     }
   }
 
-  private createFloor(physics: PhysicsWorld, options: StageOptions): void {
-    const size = { x: options.width, y: options.floorThickness, z: options.depth };
-    const position = { x: 0, y: -options.floorThickness / 2, z: 0 };
-    this.object.add(this.createBoxMesh(size, position, FLOOR_COLOR));
-    physics.createFixedBox({ size, position, friction: 0.9 });
+  public dispose(): void {
+    if (this.disposed) {
+      return;
+    }
+    this.disposed = true;
+
+    for (const handle of this.physicsHandles) {
+      handle.dispose();
+    }
+    this.physicsHandles.length = 0;
+    this.object.removeFromParent();
+    disposeObject3D(this.object);
+    this.object.clear();
   }
 
-  private createWalls(physics: PhysicsWorld, options: StageOptions): void {
+  public isFloorDropPositionValid(
+    position: { readonly x: number; readonly z: number },
+    item: PickableItem,
+    allItems: readonly PickableItem[],
+    spacing: number,
+  ): boolean {
+    const radius = item.footprintRadius;
+    if (
+      position.x - radius < -this.options.width / 2
+      || position.x + radius > this.options.width / 2
+      || position.z - radius < -this.options.depth / 2
+      || position.z + radius > this.options.depth / 2
+    ) {
+      return false;
+    }
+
+    for (const obstacle of this.options.obstacles) {
+      const overlapsX = Math.abs(position.x - obstacle.position.x) < obstacle.size.x / 2 + radius;
+      const overlapsZ = Math.abs(position.z - obstacle.position.z) < obstacle.size.z / 2 + radius;
+      if (overlapsX && overlapsZ) {
+        return false;
+      }
+    }
+
+    for (const otherItem of allItems) {
+      if (otherItem === item || !otherItem.isOnFloor()) {
+        continue;
+      }
+
+      const otherPosition = otherItem.object.position;
+      const minimumDistance = radius + otherItem.footprintRadius + spacing;
+      const distanceSquared = (
+        (position.x - otherPosition.x) ** 2
+        + (position.z - otherPosition.z) ** 2
+      );
+      if (distanceSquared < minimumDistance ** 2) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  public getPlacePoints(ids: readonly string[]): readonly PlacePoint[] {
+    return ids.map((id) => {
+      const placePoint = this.placePoints.find((candidate) => candidate.id === id);
+      if (placePoint === undefined) {
+        throw new Error(`PlacePoint "${id}" was not found in the stage.`);
+      }
+      return placePoint;
+    });
+  }
+
+  public getPickableItems(ids: readonly string[]): readonly PickableItem[] {
+    return ids.map((id) => {
+      const item = this.pickableItems.find((candidate) => candidate.id === id);
+      if (item === undefined) {
+        throw new Error(`PickableItem "${id}" was not found in the stage.`);
+      }
+      return item;
+    });
+  }
+
+  private createFloor(physics: PhysicsWorld, options: StageDefinition): void {
+    const size = { x: options.width, y: options.floorThickness, z: options.depth };
+    const position = { x: 0, y: -options.floorThickness / 2, z: 0 };
+    this.object.add(this.createBoxMesh(size, position, options.floorColor));
+    this.physicsHandles.push(physics.createFixedBox({ size, position, friction: 0.9 }));
+  }
+
+  private createWalls(physics: PhysicsWorld, options: StageDefinition): void {
     const { width, depth, wallThickness, wallHeight } = options;
     const wallDefinitions = [
       {
@@ -70,26 +165,26 @@ export class Stage {
     ];
 
     for (const wall of wallDefinitions) {
-      this.object.add(this.createBoxMesh(wall.size, wall.position, WALL_COLOR));
-      physics.createFixedBox({ ...wall, friction: 0.5 });
+      this.object.add(this.createBoxMesh(wall.size, wall.position, options.wallColor));
+      this.physicsHandles.push(physics.createFixedBox({ ...wall, friction: 0.5 }));
     }
   }
 
-  private createObstacle(physics: PhysicsWorld, obstacle: StageObstacleConfig): void {
+  private createObstacle(physics: PhysicsWorld, obstacle: StageObstacleDefinition): void {
     if (obstacle.kind === 'table') {
       this.object.add(this.createTableMesh(obstacle));
     } else {
       this.object.add(this.createCrateMesh(obstacle));
     }
 
-    physics.createFixedBox({
+    this.physicsHandles.push(physics.createFixedBox({
       position: obstacle.position,
       size: obstacle.size,
       friction: 0.7,
-    });
+    }));
   }
 
-  private createTableMesh(obstacle: StageObstacleConfig): Group {
+  private createTableMesh(obstacle: StageObstacleDefinition): Group {
     const table = new Group();
     table.position.set(obstacle.position.x, 0, obstacle.position.z);
 
@@ -120,7 +215,7 @@ export class Stage {
     return table;
   }
 
-  private createCrateMesh(obstacle: StageObstacleConfig): Mesh {
+  private createCrateMesh(obstacle: StageObstacleDefinition): Mesh {
     return this.createBoxMesh(obstacle.size, obstacle.position, obstacle.color);
   }
 

@@ -14,8 +14,13 @@ interface CharacterOptions {
   readonly offset: number;
 }
 
+export interface PhysicsBodyHandle {
+  dispose(): void;
+}
+
 export class PhysicsWorld {
   private readonly characterControllers = new Set<RAPIER.KinematicCharacterController>();
+  private disposed = false;
 
   private constructor(private readonly world: RAPIER.World) {}
 
@@ -23,7 +28,7 @@ export class PhysicsWorld {
     return new PhysicsWorld(new RAPIER.World(gravity));
   }
 
-  public createFixedBox(options: FixedBoxOptions): void {
+  public createFixedBox(options: FixedBoxOptions): PhysicsBodyHandle {
     const bodyDescription = RAPIER.RigidBodyDesc.fixed().setTranslation(
       options.position.x,
       options.position.y,
@@ -37,6 +42,17 @@ export class PhysicsWorld {
     ).setFriction(options.friction ?? 0.7);
 
     this.world.createCollider(colliderDescription, body);
+
+    let handleDisposed = false;
+    return {
+      dispose: (): void => {
+        if (handleDisposed || this.disposed) {
+          return;
+        }
+        handleDisposed = true;
+        this.world.removeRigidBody(body);
+      },
+    };
   }
 
   public createKinematicCharacter(options: CharacterOptions): KinematicCharacter {
@@ -63,10 +79,14 @@ export class PhysicsWorld {
   }
 
   public dispose(): void {
+    if (this.disposed) {
+      return;
+    }
     for (const controller of this.characterControllers) {
       this.world.removeCharacterController(controller);
     }
     this.characterControllers.clear();
+    this.disposed = true;
     this.world.free();
   }
 }

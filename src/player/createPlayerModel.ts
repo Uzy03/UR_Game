@@ -11,9 +11,19 @@ const SKIN_MATERIAL = new MeshStandardMaterial({ color: 0xffd1ae, roughness: 0.8
 const LEG_MATERIAL = new MeshStandardMaterial({ color: 0x496b83, roughness: 0.8 });
 const EYE_MATERIAL = new MeshStandardMaterial({ color: 0x263b47, roughness: 0.6 });
 
-export function createPlayerModel(): Group {
+export interface PlayerModel {
+  readonly root: Group;
+  readonly carryAnchor: Group;
+}
+
+export function createPlayerModel(): PlayerModel {
   const model = new Group();
   model.name = 'Player';
+
+  const carryAnchor = new Group();
+  carryAnchor.name = 'CarryAnchor';
+  carryAnchor.position.set(0, 0.12, 0.7);
+  model.add(carryAnchor);
 
   const torso = new Mesh(new CylinderGeometry(0.34, 0.43, 0.82, 16), BODY_MATERIAL);
   torso.position.y = -0.08;
@@ -52,5 +62,5 @@ export function createPlayerModel(): Group {
     }
   });
 
-  return model;
+  return { root: model, carryAnchor };
 }
