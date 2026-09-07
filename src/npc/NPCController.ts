@@ -1,6 +1,8 @@
-import { Group, Mesh, Vector3, type Vector3Like } from 'three';
+import { Group, Vector3, type Vector3Like } from 'three';
 import { disposeObject3D } from '../core/disposeObject3D';
 import type { Interactable, InteractionContext } from '../interaction/Interactable';
+import { InteractionHighlight } from '../visual/InteractionHighlight';
+import type { CharacterAnimator } from '../visual/CharacterAnimator';
 import { createNPCModel } from './createNPCModel';
 
 interface NPCControllerOptions {
@@ -19,7 +21,8 @@ export class NPCController implements Interactable {
   public readonly displayName: string;
   public readonly object: Group;
   public readonly speechAnchor: Group;
-  private readonly highlight: Mesh;
+  private readonly highlight: InteractionHighlight;
+  private readonly animator: CharacterAnimator;
   private readonly destination = new Vector3();
   private readonly movement = new Vector3();
   private hasDestination = false;
@@ -34,7 +37,8 @@ export class NPCController implements Interactable {
     this.object = model.root;
     this.object.name = `NPC:${this.id}`;
     this.object.position.copy(options.position);
-    this.highlight = model.highlight;
+    this.highlight = new InteractionHighlight(model.highlight, 0.82);
+    this.animator = model.animator;
     this.speechAnchor = model.speechAnchor;
   }
 
@@ -66,7 +70,15 @@ export class NPCController implements Interactable {
   }
 
   public interact(_context: InteractionContext): boolean {
-    return !this.disposed && this.interactionEnabled && (this.interactionHandler?.() ?? false);
+    const didInteract = (
+      !this.disposed
+      && this.interactionEnabled
+      && (this.interactionHandler?.() ?? false)
+    );
+    if (didInteract) {
+      this.animator.triggerInteraction();
+    }
+    return didInteract;
   }
 
   public getInteractionPosition(target: Vector3): Vector3 {
@@ -76,7 +88,7 @@ export class NPCController implements Interactable {
   }
 
   public setHighlighted(highlighted: boolean): void {
-    this.highlight.visible = highlighted;
+    this.highlight.setActive(highlighted);
   }
 
   public moveTo(position: Readonly<Vector3Like>): void {
@@ -89,34 +101,44 @@ export class NPCController implements Interactable {
   }
 
   public update(deltaSeconds: number): void {
-    if (this.disposed || !this.hasDestination) {
+    if (this.disposed) {
       return;
     }
 
-    this.movement.subVectors(this.destination, this.object.position);
-    this.movement.y = 0;
-    const distance = this.movement.length();
-    if (distance <= ARRIVAL_DISTANCE) {
-      this.object.position.x = this.destination.x;
-      this.object.position.z = this.destination.z;
-      this.stop();
-      return;
+    let actualSpeed = 0;
+    if (this.hasDestination) {
+      this.movement.subVectors(this.destination, this.object.position);
+      this.movement.y = 0;
+      const distance = this.movement.length();
+      if (distance <= ARRIVAL_DISTANCE) {
+        this.object.position.x = this.destination.x;
+        this.object.position.z = this.destination.z;
+        this.stop();
+      } else {
+        this.movement.normalize();
+        const distanceThisFrame = Math.min(distance, this.options.moveSpeed * deltaSeconds);
+        this.object.position.addScaledVector(this.movement, distanceThisFrame);
+        actualSpeed = deltaSeconds > 0 ? distanceThisFrame / deltaSeconds : 0;
+
+        if (this.movement.lengthSq() > MOVEMENT_EPSILON_SQUARED) {
+          const targetFacing = Math.atan2(this.movement.x, this.movement.z);
+          const currentFacing = this.object.rotation.y;
+          const shortestAngle = Math.atan2(
+            Math.sin(targetFacing - currentFacing),
+            Math.cos(targetFacing - currentFacing),
+          );
+          const blend = 1 - Math.exp(-this.options.turnSharpness * deltaSeconds);
+          this.object.rotation.y = currentFacing + shortestAngle * blend;
+        }
+      }
     }
 
-    this.movement.normalize();
-    const distanceThisFrame = Math.min(distance, this.options.moveSpeed * deltaSeconds);
-    this.object.position.addScaledVector(this.movement, distanceThisFrame);
-
-    if (this.movement.lengthSq() > MOVEMENT_EPSILON_SQUARED) {
-      const targetFacing = Math.atan2(this.movement.x, this.movement.z);
-      const currentFacing = this.object.rotation.y;
-      const shortestAngle = Math.atan2(
-        Math.sin(targetFacing - currentFacing),
-        Math.cos(targetFacing - currentFacing),
-      );
-      const blend = 1 - Math.exp(-this.options.turnSharpness * deltaSeconds);
-      this.object.rotation.y = currentFacing + shortestAngle * blend;
-    }
+    this.animator.update(deltaSeconds, {
+      actualSpeed,
+      maximumSpeed: this.options.moveSpeed,
+      carrying: false,
+    });
+    this.highlight.update(deltaSeconds);
   }
 
   public dispose(): void {

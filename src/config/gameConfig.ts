@@ -26,7 +26,8 @@ export const GAME_CONFIG = {
   },
   renderer: {
     maxPixelRatio: 2,
-    clearColor: 0xb9d9e8,
+    clearColor: 0xd8cfc3,
+    exposure: 1.05,
   },
   audio: {
     defaultBgmFadeSeconds: 0.8,
@@ -40,7 +41,9 @@ export const GAME_CONFIG = {
   player: {
     spawn: { x: 0, y: PLAYER_GROUNDED_Y, z: 4.1 },
     speed: 4.4,
-    turnSharpness: 14,
+    acceleration: 20,
+    deceleration: 26,
+    turnSharpness: 16,
     collider: {
       radius: PLAYER_COLLIDER_RADIUS,
       halfHeight: PLAYER_COLLIDER_HALF_HEIGHT,
@@ -55,13 +58,27 @@ export const GAME_CONFIG = {
     turnSharpness: 10,
   },
   camera: {
-    fov: 38,
+    fov: 34,
     near: 0.1,
     far: 100,
-    offset: { x: 9.5, y: 12, z: 10.5 },
-    lookAtOffset: { x: 0, y: 0.55, z: 0 },
-    positionSharpness: 5.5,
-    lookAtSharpness: 8,
+    offset: { x: 8.7, y: 16.5, z: 10.6 },
+    lookAtOffset: { x: 0, y: 0.45, z: 0 },
+    positionSharpness: 7.5,
+    lookAtSharpness: 10.5,
+    velocitySharpness: 8,
+    lookAheadSeconds: 0.12,
+    maxLookAhead: 0.48,
+    teleportSnapDistance: 5,
+  },
+  lighting: {
+    hemisphereSkyColor: 0xfff3dc,
+    hemisphereGroundColor: 0x697064,
+    hemisphereIntensity: 1.25,
+    ambientColor: 0xffead0,
+    ambientIntensity: 0.38,
+    keyColor: 0xffd6a3,
+    keyIntensity: 2.65,
+    keyPosition: { x: -8, y: 15, z: 8 },
   },
   interaction: {
     maxDistance: 1.65,

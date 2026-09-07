@@ -1,8 +1,11 @@
 import {
+  ACESFilmicToneMapping,
   AmbientLight,
   Color,
   DirectionalLight,
+  HemisphereLight,
   Mesh,
+  PCFSoftShadowMap,
   PerspectiveCamera,
   Scene,
   SRGBColorSpace,
@@ -76,6 +79,7 @@ export class Game {
   private readonly input: InputManager;
   private readonly physics: PhysicsWorld;
   private readonly player: PlayerController;
+  private readonly carry: CarrySystem;
   private readonly interaction: InteractionSystem;
   private readonly eventRunner: EventRunner;
   private readonly audio: AudioManager;
@@ -102,6 +106,9 @@ export class Game {
     this.renderer = new WebGLRenderer({ antialias: true });
     this.renderer.outputColorSpace = SRGBColorSpace;
     this.renderer.shadowMap.enabled = true;
+    this.renderer.shadowMap.type = PCFSoftShadowMap;
+    this.renderer.toneMapping = ACESFilmicToneMapping;
+    this.renderer.toneMappingExposure = GAME_CONFIG.renderer.exposure;
     this.renderer.domElement.tabIndex = 0;
     container.append(this.renderer.domElement);
 
@@ -127,12 +134,15 @@ export class Game {
     });
     this.player = new PlayerController(this.input, character, {
       speed: GAME_CONFIG.player.speed,
+      acceleration: GAME_CONFIG.player.acceleration,
+      deceleration: GAME_CONFIG.player.deceleration,
       turnSharpness: GAME_CONFIG.player.turnSharpness,
       groundProbeSpeed: GAME_CONFIG.physics.groundProbeSpeed,
     });
     this.scene.add(this.player.object);
 
-    const carry = new CarrySystem(this.player.carryAnchor);
+    this.carry = new CarrySystem(this.player.carryAnchor);
+    const carry = this.carry;
     this.interaction = new InteractionSystem(
       this.input,
       this.player.object,
@@ -140,6 +150,7 @@ export class Game {
       [],
       new InteractionPrompt(requireElement('interaction-prompt')),
       GAME_CONFIG.interaction,
+      () => this.player.triggerInteraction(),
     );
 
     const taskManager = new TaskManager();
@@ -307,6 +318,10 @@ export class Game {
       ),
       positionSharpness: GAME_CONFIG.camera.positionSharpness,
       lookAtSharpness: GAME_CONFIG.camera.lookAtSharpness,
+      velocitySharpness: GAME_CONFIG.camera.velocitySharpness,
+      lookAheadSeconds: GAME_CONFIG.camera.lookAheadSeconds,
+      maxLookAhead: GAME_CONFIG.camera.maxLookAhead,
+      teleportSnapDistance: GAME_CONFIG.camera.teleportSnapDistance,
     });
 
     this.addLights();
@@ -380,8 +395,9 @@ export class Game {
     }
     this.player.updateBeforePhysics(deltaSeconds);
     this.physics.step(deltaSeconds);
+    this.player.setCarrying(this.carry.hasItem);
     this.player.updateAfterPhysics(deltaSeconds);
-    this.interaction.update();
+    this.interaction.update(deltaSeconds);
     this.eventRunner.update(deltaSeconds);
     this.audio.update(deltaSeconds);
     this.followCamera.update(deltaSeconds);
@@ -403,11 +419,28 @@ export class Game {
   };
 
   private addLights(): void {
-    const ambient = new AmbientLight(0xffffff, 1.9);
+    const hemisphere = new HemisphereLight(
+      GAME_CONFIG.lighting.hemisphereSkyColor,
+      GAME_CONFIG.lighting.hemisphereGroundColor,
+      GAME_CONFIG.lighting.hemisphereIntensity,
+    );
+    this.scene.add(hemisphere);
+
+    const ambient = new AmbientLight(
+      GAME_CONFIG.lighting.ambientColor,
+      GAME_CONFIG.lighting.ambientIntensity,
+    );
     this.scene.add(ambient);
 
-    const sun = new DirectionalLight(0xfff3df, 3.2);
-    sun.position.set(-8, 14, 7);
+    const sun = new DirectionalLight(
+      GAME_CONFIG.lighting.keyColor,
+      GAME_CONFIG.lighting.keyIntensity,
+    );
+    sun.position.set(
+      GAME_CONFIG.lighting.keyPosition.x,
+      GAME_CONFIG.lighting.keyPosition.y,
+      GAME_CONFIG.lighting.keyPosition.z,
+    );
     sun.castShadow = true;
     sun.shadow.mapSize.set(2048, 2048);
     sun.shadow.camera.left = -14;
@@ -416,6 +449,8 @@ export class Game {
     sun.shadow.camera.bottom = -12;
     sun.shadow.camera.near = 1;
     sun.shadow.camera.far = 35;
+    sun.shadow.bias = -0.00012;
+    sun.shadow.normalBias = 0.025;
     this.scene.add(sun);
   }
 }

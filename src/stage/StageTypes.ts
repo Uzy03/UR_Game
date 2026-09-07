@@ -29,6 +29,30 @@ export interface StagePlacePointDefinition {
   readonly position: Vector3Config;
 }
 
+export type StageDecorationKind =
+  | 'chair'
+  | 'rug'
+  | 'plant'
+  | 'wall-art'
+  | 'shelf'
+  | 'table-setting'
+  | 'pendant';
+
+export interface StageDecorationDefinition {
+  readonly kind: StageDecorationKind;
+  readonly position: Vector3Config;
+  readonly rotationY?: number;
+  readonly scale?: Vector3Config;
+  readonly primaryColor: number;
+  readonly secondaryColor?: number;
+}
+
+export interface StageVisualStyleDefinition {
+  readonly plinthColor: number;
+  readonly floorLineColor?: number;
+  readonly wallTrimColor?: number;
+}
+
 export interface StageDefinition {
   readonly width: number;
   readonly depth: number;
@@ -37,6 +61,8 @@ export interface StageDefinition {
   readonly wallHeight: number;
   readonly floorColor: number;
   readonly wallColor: number;
+  readonly visualStyle?: StageVisualStyleDefinition;
+  readonly decorations?: readonly StageDecorationDefinition[];
   readonly obstacles: readonly StageObstacleDefinition[];
   readonly items: readonly StagePickableItemDefinition[];
   readonly placePoints: readonly StagePlacePointDefinition[];

@@ -1,6 +1,6 @@
-# Anniversary Game — Phase 15
+# Anniversary Game — Phase 16
 
-交際1周年記念の短編3Dゲームに向けた、Webブラウザ用のゲーム基盤です。Phase 15では、NPC名・Objective・Task HUDを含むCampaign上の物語表示を、Git管理外のローカルJSONから差し替えられる状態までprivate content境界を完成させています。
+交際1周年記念の短編3Dゲームです。Phase 16では既存のゲーム／private content基盤を維持しながら、`campaign-cafe`を「Warm Miniature Memory」方向のビジュアル・操作感vertical sliceへ更新しています。
 
 ## 実行
 
@@ -9,7 +9,7 @@ npm install
 npm run dev
 ```
 
-型チェックを含む本番ビルドは`npm run build`、Phase 15のブラウザ非依存検証は`npm run validate:phase15`、ビルド結果の確認は`npm run preview`で行えます。
+型チェックを含む本番ビルドは`npm run build`、Phase 16のブラウザ非依存検証は`npm run validate:phase16`、ビルド結果の確認は`npm run preview`で行えます。
 
 ## 操作
 
@@ -55,19 +55,24 @@ New Gameのユーザー操作後にMain BGMが始まり、Transition CardとMemo
 - `InputManager`: 複数の入力ソースを統合し、長さ1以内へ正規化
 - `PhysicsWorld`: Rapierの初期化、静的コライダー、物理ステップ、Scene所有Bodyの削除ハンドル
 - `KinematicCharacter`: RapierのCharacter Controllerによる補正移動
-- `PlayerController`: 抽象化された移動入力を物理移動と向きへ反映
-- `InteractionSystem`: プレイヤー前方の操作対象選択、Action入力、ハイライト、操作ヒント
+- `PlayerController`: 抽象化された移動入力へframe-rate非依存の加減速を適用し、Rapier移動と向きを更新
+- `MovementSmoothing`: 入力方向と現在速度から加速・減速・反転を計算する純ロジック
+- `InteractionSystem`: プレイヤー前方の操作対象選択、Action入力、ハイライト、操作ヒント、成功時visual feedback通知
 - `CarrySystem`: 1個だけの保持状態、安全な床ドロップ、現在Sceneへの再binding
-- `PickableItem`: 加工状態とactive状態を独立して持つ、種類に依存しない持ち運び可能アイテム
+- `PickableItem`: 加工状態とactive状態を独立して持ち、pickup pop／placement settleを描画だけで行う持ち運び可能アイテム
 - `PlacePoint`: 空き・配置済み状態と、台への配置・再取得
 - `ProcessingStation`: 1個のItemの配置、deltaTime加工、進捗表示、加工済みItemの再取得
 - `AssemblyStation`: 2個の入力Item、deltaTime組立、入力の無効化、完成Itemの有効化と再取得
-- `FollowCamera`: プレイヤーとは独立したスムーズ追従
-- `Stage`: Scene定義から表示物と静的コライダーを構築し、所有Resourceを破棄
+- `FollowCamera`: プレイヤーとは独立した固定斜め見下ろし、安定した追従、微小look-ahead、Scene jump時snap
+- `CharacterVisual`: Player／Companion共通のprimitive製チビrigを生成
+- `CharacterAnimator`: Rapier解決後の実移動量からidle／walk／carry／interact poseをdeltaTime更新
+- `ContactShadow`: Characterを床へ視覚的に接地させる低コストblob shadow
+- `InteractionHighlight`: 選択中のringへ控えめなpulseを適用
+- `Stage`: Scene定義から表示物・静的コライダー・任意のvisual-only decorationを構築し、所有Resourceを破棄
 - `SceneContentRegistry`: Scene定義のID解決と静的検証
 - `SceneRuntime`: 1つのSceneに属するStage・NPC・Task Bindingの実体とcleanup
 - `SceneManager`: Scene Runtimeの同期生成・交換・破棄とglobal systemの再binding
-- `NPCController`: NPCの表示、Interactable対応、直線移動、向き制御、明示的なcleanup
+- `NPCController`: NPCのInteractable対応、直線移動、向き、実移動量ベースのvisual animation、明示的なcleanup
 - `DialogueManager`: データで渡された会話の現在行と終了を管理
 - `TaskManager`: 実行中タスクと完了通知を管理
 - `PlacementTask`: アイテムIDとPlacePoint IDで設定できる配置成功条件
@@ -106,9 +111,11 @@ New Gameのユーザー操作後にMain BGMが始まり、Transition CardとMemo
 
 CampaignのScene、Phone content、Transition Card、Audio content、canonical Event Sequence、Checkpointは`src/content/campaign/`に分離しています。`campaignContent.ts`は検証済みStoryを固定のCampaign構造へ注入し、旧Phase 6〜10データと合わせてRegistryへ渡す薄いfactoryです。runtime managerではありません。CheckpointのresumeSequenceはcanonical segment列のsuffixから生成するため、Story本文・Transition Card・Audio CueをCheckpointごとに複製しません。
 
-Campaign専用の`Chapter`、`CampaignManager`、新しいTaskは追加していません。Phase 15でもGameEventの種類は増やしていません。`SceneManager`、`SceneDefinition`、Task、PhoneControllerはStory loaderを知らず、旧Phase 6〜12のScene・Phone content・Checkpointもv1 Save互換のため登録を維持しています。
+Cafeのpaletteと10個の装飾groupは`campaignVisualStyle.ts`にあり、Story JSONやSaveへ入りません。Phase 16では`campaign-cafe`とそのcompleted Sceneだけがこのvisual sliceを使用し、他Sceneへの全面展開は後続判断へ残しています。詳細は[`docs/phase-16-spec.md`](docs/phase-16-spec.md)を参照してください。
 
-`localStorage`ではGame Saveの`ur-game:save:v1`とPhone進行の`ur-game:phone-progress:v1`を分離しています。Phase 15でも両schemaはv1のままです。current BGM、再生位置、Mute、volume、unlock状態は保存せず、Checkpointのcanonical resume sequenceが適切なBGM Cueを再指定します。
+Campaign専用の`Chapter`、`CampaignManager`、新しいTaskは追加していません。Phase 16でもGameEventの種類は増やしていません。`SceneManager`、Task、PhoneControllerはStory loaderを知らず、旧Phase 6〜12のScene・Phone content・Checkpointもv1 Save互換のため登録を維持しています。
+
+`localStorage`ではGame Saveの`ur-game:save:v1`とPhone進行の`ur-game:phone-progress:v1`を分離しています。Phase 16でも両schemaはv1のままです。current BGM、再生位置、Mute、volume、unlock状態は保存せず、Checkpointのcanonical resume sequenceが適切なBGM Cueを再指定します。
 
 入力ソースやゲームループの境界を保ち、キーコードは`KeyboardInput`のみに閉じ込めています。アイテムは操作性を優先してDynamicRigidBodyにせず、床・保持・PlacePointへの配置状態を明示的に切り替えています。
 

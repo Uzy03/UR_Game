@@ -1,12 +1,13 @@
 {
   "name": "ur-game",
   "private": true,
-  "version": "0.15.0",
+  "version": "0.16.0",
   "type": "module",
   "scripts": {
     "generate:audio": "node scripts/generate-placeholder-audio.mjs",
     "validate:phase14": "node scripts/validate-phase-14.mjs",
     "validate:phase15": "node scripts/validate-phase-15.mjs",
+    "validate:phase16": "node scripts/validate-phase-16.mjs",
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview"
