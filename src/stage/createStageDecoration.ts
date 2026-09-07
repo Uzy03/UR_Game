@@ -10,8 +10,32 @@ import {
 } from 'three';
 import type {
   StageDecorationDefinition,
+  StageDecorationKind,
   Vector3Config,
 } from './StageTypes';
+
+interface DecorationShadowPolicy {
+  readonly casterChildIndices: readonly number[];
+  readonly receiveShadow: boolean;
+}
+
+const DECORATION_SHADOW_POLICY: Record<StageDecorationKind, DecorationShadowPolicy> = {
+  bed: { casterChildIndices: [1, 2], receiveShadow: true },
+  bench: { casterChildIndices: [0, 1], receiveShadow: true },
+  chair: { casterChildIndices: [0, 1], receiveShadow: true },
+  'flower-cluster': { casterChildIndices: [], receiveShadow: false },
+  gift: { casterChildIndices: [0, 1], receiveShadow: true },
+  lamp: { casterChildIndices: [], receiveShadow: false },
+  railing: { casterChildIndices: [], receiveShadow: false },
+  rock: { casterChildIndices: [1], receiveShadow: true },
+  rug: { casterChildIndices: [], receiveShadow: true },
+  plant: { casterChildIndices: [1, 2], receiveShadow: false },
+  tree: { casterChildIndices: [1, 2], receiveShadow: false },
+  'wall-art': { casterChildIndices: [], receiveShadow: false },
+  shelf: { casterChildIndices: [], receiveShadow: false },
+  'table-setting': { casterChildIndices: [], receiveShadow: false },
+  pendant: { casterChildIndices: [], receiveShadow: false },
+};
 
 interface MaterialOptions {
   readonly emissive?: number;
@@ -352,10 +376,14 @@ export function createStageDecoration(definition: StageDecorationDefinition): Gr
     }
   }
 
+  const shadowPolicy = DECORATION_SHADOW_POLICY[definition.kind];
+  const casterIndices = new Set(shadowPolicy.casterChildIndices);
+  let meshIndex = 0;
   group.traverse((object) => {
     if (object instanceof Mesh) {
-      object.castShadow = true;
-      object.receiveShadow = true;
+      object.castShadow = casterIndices.has(meshIndex);
+      object.receiveShadow = shadowPolicy.receiveShadow;
+      meshIndex += 1;
     }
   });
   return group;

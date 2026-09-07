@@ -18,6 +18,20 @@ import { createStageDecoration } from './createStageDecoration';
 
 const TABLE_LEG_DARKEN = 0.15;
 
+interface MeshShadowOptions {
+  readonly castShadow: boolean;
+  readonly receiveShadow: boolean;
+}
+
+const RECEIVE_ONLY_SHADOWS: MeshShadowOptions = {
+  castShadow: false,
+  receiveShadow: true,
+};
+const NO_SHADOWS: MeshShadowOptions = {
+  castShadow: false,
+  receiveShadow: false,
+};
+
 export class Stage {
   public readonly object = new Group();
   public readonly pickableItems: readonly PickableItem[];
@@ -147,7 +161,12 @@ export class Stage {
   private createFloor(physics: PhysicsWorld, options: StageDefinition): void {
     const size = { x: options.width, y: options.floorThickness, z: options.depth };
     const position = { x: 0, y: -options.floorThickness / 2, z: 0 };
-    this.object.add(this.createBoxMesh(size, position, options.floorColor));
+    this.object.add(this.createBoxMesh(
+      size,
+      position,
+      options.floorColor,
+      RECEIVE_ONLY_SHADOWS,
+    ));
     this.physicsHandles.push(physics.createFixedBox({ size, position, friction: 0.9 }));
   }
 
@@ -173,7 +192,12 @@ export class Stage {
     ];
 
     for (const wall of wallDefinitions) {
-      this.object.add(this.createBoxMesh(wall.size, wall.position, options.wallColor));
+      this.object.add(this.createBoxMesh(
+        wall.size,
+        wall.position,
+        options.wallColor,
+        RECEIVE_ONLY_SHADOWS,
+      ));
       this.physicsHandles.push(physics.createFixedBox({ ...wall, friction: 0.5 }));
     }
   }
@@ -202,6 +226,7 @@ export class Stage {
       { x: options.width + 0.45, y: 0.18, z: options.depth + 0.45 },
       { x: 0, y: -options.floorThickness - 0.05, z: 0 },
       style.plinthColor,
+      NO_SHADOWS,
     ));
 
     if (style.floorLineColor !== undefined) {
@@ -212,6 +237,7 @@ export class Stage {
           { x: 0.018, y: lineHeight, z: options.depth },
           { x, y: lineHeight / 2, z: 0 },
           style.floorLineColor,
+          NO_SHADOWS,
         ));
       }
       for (let z = -options.depth / 2 + spacing; z < options.depth / 2; z += spacing) {
@@ -219,6 +245,7 @@ export class Stage {
           { x: options.width, y: lineHeight, z: 0.018 },
           { x: 0, y: lineHeight / 2, z },
           style.floorLineColor,
+          NO_SHADOWS,
         ));
       }
     }
@@ -232,6 +259,7 @@ export class Stage {
           { x: options.width, y: trimHeight, z: trimDepth },
           { x: 0, y: trimY, z },
           style.wallTrimColor,
+          NO_SHADOWS,
         ));
       }
       for (const x of [-options.width / 2 + trimDepth / 2, options.width / 2 - trimDepth / 2]) {
@@ -239,6 +267,7 @@ export class Stage {
           { x: trimDepth, y: trimHeight, z: options.depth },
           { x, y: trimY, z: 0 },
           style.wallTrimColor,
+          NO_SHADOWS,
         ));
       }
     }
@@ -283,13 +312,14 @@ export class Stage {
     size: { readonly x: number; readonly y: number; readonly z: number },
     position: { readonly x: number; readonly y: number; readonly z: number },
     color: number,
+    shadows: MeshShadowOptions = { castShadow: true, receiveShadow: true },
   ): Mesh {
     const geometry = new BoxGeometry(size.x, size.y, size.z);
     const material = new MeshStandardMaterial({ color, roughness: 0.82 });
     const mesh = new Mesh(geometry, material);
     mesh.position.set(position.x, position.y, position.z);
-    mesh.castShadow = true;
-    mesh.receiveShadow = true;
+    mesh.castShadow = shadows.castShadow;
+    mesh.receiveShadow = shadows.receiveShadow;
     return mesh;
   }
 }

@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { Group } from 'three';
 import { createServer } from 'vite';
 
 await import('./validate-phase-16.mjs');
@@ -26,6 +27,11 @@ try {
   const { createStageDecoration } = await loadModule(
     '/src/stage/createStageDecoration.ts',
   );
+  const { clampFrameDeltaSeconds } = await loadModule('/src/core/FrameDelta.ts');
+  const { GAME_CONFIG } = await loadModule('/src/config/gameConfig.ts');
+  const { stepPlanarVelocity } = await loadModule('/src/player/MovementSmoothing.ts');
+  const { CountdownTimer } = await loadModule('/src/task/CountdownTimer.ts');
+  const { Stage } = await loadModule('/src/stage/Stage.ts');
 
   const scenes = createCampaignScenes(FICTIONAL_CAMPAIGN_STORY);
   new SceneContentRegistry(scenes);
@@ -103,23 +109,37 @@ try {
     assert.ok(decorationKinds.has(requiredKind), `Missing decoration kind: ${requiredKind}`);
   }
 
-  for (const kind of [
-    'bed',
-    'bench',
-    'chair',
-    'flower-cluster',
-    'gift',
-    'lamp',
-    'railing',
-    'rock',
-    'rug',
-    'plant',
-    'tree',
-    'wall-art',
-    'shelf',
-    'table-setting',
-    'pendant',
-  ]) {
+  const expectedDecorationShadows = {
+    bed: [2, 4],
+    bench: [2, 4],
+    chair: [2, 6],
+    'flower-cluster': [0, 0],
+    gift: [2, 6],
+    lamp: [0, 0],
+    railing: [0, 0],
+    rock: [1, 3],
+    rug: [0, 2],
+    plant: [2, 0],
+    tree: [2, 0],
+    'wall-art': [0, 0],
+    shelf: [0, 0],
+    'table-setting': [0, 0],
+    pendant: [0, 0],
+  };
+  const countShadows = (root) => {
+    let casters = 0;
+    let receivers = 0;
+    let meshes = 0;
+    root.traverse((object) => {
+      if (!object.isMesh) return;
+      meshes += 1;
+      if (object.castShadow) casters += 1;
+      if (object.receiveShadow) receivers += 1;
+    });
+    return { casters, receivers, meshes };
+  };
+
+  for (const [kind, expectedShadows] of Object.entries(expectedDecorationShadows)) {
     const group = createStageDecoration({
       kind,
       position: { x: 0, y: 0, z: 0 },
@@ -128,6 +148,82 @@ try {
     });
     assert.equal(group.name, `StageDecoration:${kind}`);
     assert.ok(group.children.length > 0);
+    const shadows = countShadows(group);
+    assert.deepEqual([shadows.casters, shadows.receivers], expectedShadows);
+  }
+
+  const viewpoint = scenesById.get('campaign-viewpoint');
+  const viewpointShadowCount = viewpoint.stage.decorations
+    .map((decoration) => countShadows(createStageDecoration(decoration)).casters)
+    .reduce((total, count) => total + count, 0);
+  assert.equal(viewpointShadowCount, 4);
+
+  const physics = {
+    createFixedBox: () => ({ dispose: () => undefined }),
+  };
+  const stage = new Stage(new Group(), physics, {
+    width: 4,
+    depth: 4,
+    floorThickness: 0.4,
+    wallThickness: 0.5,
+    wallHeight: 1.5,
+    floorColor: 0xffffff,
+    wallColor: 0xffffff,
+    visualStyle: {
+      plinthColor: 0x777777,
+      floorLineColor: 0x888888,
+      wallTrimColor: 0x999999,
+    },
+    obstacles: [],
+    decorations: [],
+    items: [],
+    placePoints: [],
+  });
+  const stageShadows = countShadows(stage.object);
+  assert.equal(stageShadows.casters, 0);
+  assert.equal(stageShadows.receivers, 5);
+  assert.ok(stageShadows.meshes > stageShadows.receivers);
+  stage.dispose();
+
+  assert.equal(GAME_CONFIG.loop.maxDeltaSeconds, 0.1);
+  assert.equal(clampFrameDeltaSeconds(2, GAME_CONFIG.loop.maxDeltaSeconds), 0.1);
+  assert.equal(clampFrameDeltaSeconds(-1, GAME_CONFIG.loop.maxDeltaSeconds), 0);
+  assert.equal(clampFrameDeltaSeconds(Number.NaN, GAME_CONFIG.loop.maxDeltaSeconds), 0);
+
+  const simulateLowFps = (fps) => {
+    const timer = new CountdownTimer();
+    const velocity = { x: 0, z: 0 };
+    let distance = 0;
+    let appliedSeconds = 0;
+    timer.start(10);
+    for (let frame = 0; frame < fps * 10; frame += 1) {
+      const deltaSeconds = clampFrameDeltaSeconds(
+        1 / fps,
+        GAME_CONFIG.loop.maxDeltaSeconds,
+      );
+      stepPlanarVelocity(
+        velocity,
+        { x: 0, z: 1 },
+        GAME_CONFIG.player.speed,
+        GAME_CONFIG.player.acceleration,
+        GAME_CONFIG.player.deceleration,
+        deltaSeconds,
+      );
+      distance += velocity.z * deltaSeconds;
+      appliedSeconds += deltaSeconds;
+      timer.update(deltaSeconds);
+    }
+    return { appliedSeconds, distance, remainingSeconds: timer.remainingSeconds };
+  };
+  const lowFpsResults = new Map([10, 15, 20, 60].map((fps) => [fps, simulateLowFps(fps)]));
+  const sixtyFps = lowFpsResults.get(60);
+  for (const [fps, result] of lowFpsResults) {
+    assert.ok(Math.abs(result.appliedSeconds - 10) < 0.000001, `${fps} FPS lost time`);
+    assert.ok(result.remainingSeconds < 0.000001, `${fps} FPS timer ran slowly`);
+    assert.ok(
+      Math.abs(result.distance - sixtyFps.distance) < 0.2,
+      `${fps} FPS movement diverged from 60 FPS`,
+    );
   }
 
   for (const scene of scenes) {
