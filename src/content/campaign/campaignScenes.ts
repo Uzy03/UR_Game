@@ -1,6 +1,11 @@
 import type { SceneDefinition } from '../../scene/SceneTypes';
 import type { CampaignStoryDefinition } from './CampaignStoryTypes';
 import {
+  CAMPAIGN_CAFE_DECORATIONS,
+  CAMPAIGN_CAFE_PALETTE,
+  CAMPAIGN_CAFE_VISUAL_STYLE,
+} from './campaignVisualStyle';
+import {
   CAMPAIGN_ASSEMBLY_INPUT_A_ID,
   CAMPAIGN_ASSEMBLY_INPUT_B_ID,
   CAMPAIGN_ASSEMBLY_OUTPUT_ID,
@@ -93,32 +98,34 @@ const CAMPAIGN_CAFE_SCENE = {
     floorThickness: 0.4,
     wallThickness: 0.55,
     wallHeight: 1.55,
-    floorColor: 0xf0dfca,
-    wallColor: 0xa87864,
+    floorColor: CAMPAIGN_CAFE_PALETTE.floor,
+    wallColor: CAMPAIGN_CAFE_PALETTE.wall,
+    visualStyle: CAMPAIGN_CAFE_VISUAL_STYLE,
+    decorations: CAMPAIGN_CAFE_DECORATIONS,
     obstacles: [
       {
         kind: 'table',
         position: { x: -4.8, y: 0.65, z: 0.2 },
         size: { x: 2.6, y: 1.3, z: 1.6 },
-        color: 0x7e5d4f,
+        color: CAMPAIGN_CAFE_PALETTE.darkWood,
       },
       {
         kind: 'table',
         position: { x: 3.5, y: 0.65, z: -0.4 },
         size: { x: 3.5, y: 1.3, z: 1.7 },
-        color: 0x9f6d55,
+        color: CAMPAIGN_CAFE_PALETTE.warmWood,
       },
       {
         kind: 'box',
         position: { x: -6.7, y: 0.55, z: -3.8 },
         size: { x: 1.1, y: 1.1, z: 1.1 },
-        color: 0x6e8b8e,
+        color: CAMPAIGN_CAFE_PALETTE.dustyBlue,
       },
       {
         kind: 'box',
         position: { x: 6.6, y: 0.55, z: 3.7 },
         size: { x: 1.1, y: 1.1, z: 1.1 },
-        color: 0xc19d67,
+        color: CAMPAIGN_CAFE_PALETTE.softGold,
       },
     ],
     items: [

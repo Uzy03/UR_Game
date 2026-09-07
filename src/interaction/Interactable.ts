@@ -12,4 +12,5 @@ export interface Interactable {
   interact(context: InteractionContext): boolean;
   getInteractionPosition(target: Vector3): Vector3;
   setHighlighted(highlighted: boolean): void;
+  updateVisual?(deltaSeconds: number): void;
 }

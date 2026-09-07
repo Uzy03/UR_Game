@@ -31,6 +31,7 @@ export class InteractionSystem {
     interactables: readonly Interactable[],
     private readonly prompt: InteractionPrompt,
     private readonly options: InteractionSystemOptions,
+    private readonly onInteractionSucceeded: () => void = () => undefined,
   ) {
     this.context = { carry };
     for (const interactable of interactables) {
@@ -38,7 +39,11 @@ export class InteractionSystem {
     }
   }
 
-  public update(): void {
+  public update(deltaSeconds = 0): void {
+    for (const interactable of this.interactables) {
+      interactable.updateVisual?.(deltaSeconds);
+    }
+
     if (!this.enabled) {
       return;
     }
@@ -49,10 +54,14 @@ export class InteractionSystem {
       return;
     }
 
+    let didInteract = false;
     if (this.currentTarget !== null) {
-      this.currentTarget.interact(this.context);
+      didInteract = this.currentTarget.interact(this.context);
     } else if (this.getValidFloorDropPosition() !== null) {
-      this.carry.dropToFloor(this.floorDropPosition);
+      didInteract = this.carry.dropToFloor(this.floorDropPosition);
+    }
+    if (didInteract) {
+      this.onInteractionSucceeded();
     }
 
     if (this.enabled) {

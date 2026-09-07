@@ -8,6 +8,7 @@ import {
 } from 'three';
 import type { Interactable, InteractionContext } from './Interactable';
 import type { PickableItem } from './PickableItem';
+import { InteractionHighlight } from '../visual/InteractionHighlight';
 
 interface PlacePointOptions {
   readonly id: string;
@@ -18,7 +19,7 @@ interface PlacePointOptions {
 export class PlacePoint implements Interactable {
   public readonly id: string;
   public readonly object = new Group();
-  private readonly highlight: Mesh;
+  private readonly highlight: InteractionHighlight;
   private placedItem: PickableItem | null = null;
 
   public constructor(options: PlacePointOptions) {
@@ -26,14 +27,20 @@ export class PlacePoint implements Interactable {
     this.object.name = `PlacePoint:${options.id}`;
     this.object.position.copy(options.position);
 
-    this.highlight = new Mesh(
+    const highlightMesh = new Mesh(
       new RingGeometry(0.26, 0.38, 32),
-      new MeshBasicMaterial({ color: 0xffef8a, transparent: true, opacity: 0.92, depthWrite: false }),
+      new MeshBasicMaterial({
+        color: 0xf3d58a,
+        transparent: true,
+        opacity: 0.82,
+        depthWrite: false,
+        toneMapped: false,
+      }),
     );
-    this.highlight.rotation.x = -Math.PI / 2;
-    this.highlight.position.y = 0.018;
-    this.highlight.visible = false;
-    this.object.add(this.highlight);
+    highlightMesh.rotation.x = -Math.PI / 2;
+    highlightMesh.position.y = 0.018;
+    this.object.add(highlightMesh);
+    this.highlight = new InteractionHighlight(highlightMesh, 0.82);
     options.parent.add(this.object);
   }
 
@@ -81,7 +88,11 @@ export class PlacePoint implements Interactable {
   }
 
   public setHighlighted(highlighted: boolean): void {
-    this.highlight.visible = highlighted;
+    this.highlight.setActive(highlighted);
+  }
+
+  public updateVisual(deltaSeconds: number): void {
+    this.highlight.update(deltaSeconds);
   }
 
   public reset(): void {

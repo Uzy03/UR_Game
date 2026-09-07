@@ -309,6 +309,31 @@ export class SceneContentRegistry {
     this.assertColor(stage.floorColor, `Scene "${sceneId}" floor color`);
     this.assertColor(stage.wallColor, `Scene "${sceneId}" wall color`);
 
+    if (stage.visualStyle !== undefined) {
+      this.assertColor(stage.visualStyle.plinthColor, `Scene "${sceneId}" plinth color`);
+      if (stage.visualStyle.floorLineColor !== undefined) {
+        this.assertColor(stage.visualStyle.floorLineColor, `Scene "${sceneId}" floor line color`);
+      }
+      if (stage.visualStyle.wallTrimColor !== undefined) {
+        this.assertColor(stage.visualStyle.wallTrimColor, `Scene "${sceneId}" wall trim color`);
+      }
+    }
+
+    for (const [index, decoration] of (stage.decorations ?? []).entries()) {
+      const label = `Scene "${sceneId}" decoration ${index}`;
+      this.assertVector(decoration.position, `${label} position`);
+      if (decoration.rotationY !== undefined) {
+        this.assertFinite(decoration.rotationY, `${label} rotationY`);
+      }
+      if (decoration.scale !== undefined) {
+        this.assertPositiveVector(decoration.scale, `${label} scale`);
+      }
+      this.assertColor(decoration.primaryColor, `${label} primary color`);
+      if (decoration.secondaryColor !== undefined) {
+        this.assertColor(decoration.secondaryColor, `${label} secondary color`);
+      }
+    }
+
     for (const [index, obstacle] of stage.obstacles.entries()) {
       this.assertVector(obstacle.position, `Scene "${sceneId}" obstacle ${index} position`);
       this.assertPositiveVector(obstacle.size, `Scene "${sceneId}" obstacle ${index} size`);

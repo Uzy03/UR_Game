@@ -13,6 +13,7 @@ import {
   Vector3,
 } from 'three';
 import type { Interactable, InteractionContext } from './Interactable';
+import { InteractionHighlight } from '../visual/InteractionHighlight';
 
 export type PickableItemKind = 'tomato' | 'box' | 'plate' | 'drink' | 'bundle';
 export type ItemProcessingState = 'raw' | 'processed';
@@ -48,7 +49,8 @@ export class PickableItem implements Interactable {
   public readonly id: string;
   public readonly object = new Group();
   public readonly footprintRadius: number;
-  private readonly highlight: Mesh;
+  private readonly visual: Group;
+  private readonly highlight: InteractionHighlight;
   private readonly processedIndicator: Mesh;
   private readonly initialParent: Object3D;
   private readonly initialPosition = new Vector3();
@@ -58,6 +60,8 @@ export class PickableItem implements Interactable {
   private state: PickableItemPlacementState = 'world';
   private itemProcessingState: ItemProcessingState = 'raw';
   private active = true;
+  private feedbackKind: 'none' | 'pickup' | 'settle' = 'none';
+  private feedbackElapsedSeconds = 0;
 
   public constructor(options: PickableItemOptions) {
     this.id = options.id;
@@ -67,17 +71,24 @@ export class PickableItem implements Interactable {
     this.initialActive = options.initialActive ?? true;
     this.object.name = `PickableItem:${options.id}`;
     this.footprintRadius = ITEM_FOOTPRINT_RADIUS[options.kind];
-    this.object.add(this.createVisual(options.kind));
+    this.visual = this.createVisual(options.kind);
+    this.object.add(this.visual);
 
-    this.highlight = new Mesh(
+    const highlightMesh = new Mesh(
       new RingGeometry(this.footprintRadius + 0.04, this.footprintRadius + 0.12, 32),
-      new MeshBasicMaterial({ color: 0xffef8a, transparent: true, opacity: 0.9, depthWrite: false }),
+      new MeshBasicMaterial({
+        color: 0xf3d58a,
+        transparent: true,
+        opacity: 0.82,
+        depthWrite: false,
+        toneMapped: false,
+      }),
     );
-    this.highlight.name = 'InteractionHighlight';
-    this.highlight.rotation.x = -Math.PI / 2;
-    this.highlight.position.y = 0.012;
-    this.highlight.visible = false;
-    this.object.add(this.highlight);
+    highlightMesh.name = 'InteractionHighlight';
+    highlightMesh.rotation.x = -Math.PI / 2;
+    highlightMesh.position.y = 0.012;
+    this.object.add(highlightMesh);
+    this.highlight = new InteractionHighlight(highlightMesh, 0.82);
 
     this.processedIndicator = new Mesh(
       new SphereGeometry(0.095, 14, 10),
@@ -126,7 +137,31 @@ export class PickableItem implements Interactable {
   }
 
   public setHighlighted(highlighted: boolean): void {
-    this.highlight.visible = highlighted;
+    this.highlight.setActive(highlighted);
+  }
+
+  public updateVisual(deltaSeconds: number): void {
+    this.highlight.update(deltaSeconds);
+    if (this.feedbackKind === 'none') {
+      return;
+    }
+
+    const duration = this.feedbackKind === 'pickup' ? 0.2 : 0.28;
+    this.feedbackElapsedSeconds += Math.max(0, deltaSeconds);
+    const progress = Math.min(1, this.feedbackElapsedSeconds / duration);
+    if (this.feedbackKind === 'pickup') {
+      const pop = Math.sin(progress * Math.PI);
+      this.visual.position.y = pop * 0.16;
+      this.visual.scale.setScalar(1 + pop * 0.13);
+    } else {
+      const settle = Math.sin(progress * Math.PI * 2.5) * (1 - progress);
+      this.visual.position.y = Math.max(0, settle * 0.08);
+      this.visual.scale.set(1 + settle * 0.06, 1 - settle * 0.04, 1 + settle * 0.06);
+    }
+
+    if (progress >= 1) {
+      this.resetVisualFeedback();
+    }
   }
 
   public isOnFloor(): boolean {
@@ -164,6 +199,7 @@ export class PickableItem implements Interactable {
     anchor.add(this.object);
     this.object.position.set(0, 0, 0);
     this.object.rotation.set(0, 0, 0);
+    this.startVisualFeedback('pickup');
   }
 
   public placeAt(anchor: Object3D): void {
@@ -172,6 +208,7 @@ export class PickableItem implements Interactable {
     anchor.add(this.object);
     this.object.position.set(0, 0, 0);
     this.object.rotation.set(0, 0, 0);
+    this.startVisualFeedback('settle');
   }
 
   public placeOnFloor(parent: Object3D, position: Readonly<Vector3Like>): void {
@@ -180,6 +217,7 @@ export class PickableItem implements Interactable {
     parent.add(this.object);
     this.object.position.copy(position);
     this.object.rotation.set(0, 0, 0);
+    this.startVisualFeedback('settle');
   }
 
   public reset(): void {
@@ -198,6 +236,7 @@ export class PickableItem implements Interactable {
       this.initialRotation.y,
       this.initialRotation.z,
     );
+    this.resetVisualFeedback();
   }
 
   public resetProcessingState(): void {
@@ -232,6 +271,7 @@ export class PickableItem implements Interactable {
     this.state = runtimeState.placementState;
     this.setProcessingState(runtimeState.processingState);
     this.setActive(runtimeState.active);
+    this.resetVisualFeedback();
   }
 
   public releaseToWorld(parent: Object3D): void {
@@ -251,6 +291,18 @@ export class PickableItem implements Interactable {
     if (!active) {
       this.setHighlighted(false);
     }
+  }
+
+  private startVisualFeedback(kind: 'pickup' | 'settle'): void {
+    this.feedbackKind = kind;
+    this.feedbackElapsedSeconds = 0;
+  }
+
+  private resetVisualFeedback(): void {
+    this.feedbackKind = 'none';
+    this.feedbackElapsedSeconds = 0;
+    this.visual.position.set(0, 0, 0);
+    this.visual.scale.set(1, 1, 1);
   }
 
   private createVisual(kind: PickableItemKind): Group {
