@@ -2,6 +2,7 @@ import type { Object3D } from 'three';
 import type { TaskEventBinding } from '../events/TaskEventBinding';
 import type { CarrySystem } from '../interaction/CarrySystem';
 import type { InteractionSystem } from '../interaction/InteractionSystem';
+import type { ItemThrowSystem } from '../interaction/ItemThrowSystem';
 import type { NPCController } from '../npc/NPCController';
 import type { PlayerController } from '../player/PlayerController';
 import type { ResultOverlay } from '../ui/ResultOverlay';
@@ -20,6 +21,7 @@ interface SceneManagerDependencies {
   readonly player: PlayerController;
   readonly carry: CarrySystem;
   readonly interaction: InteractionSystem;
+  readonly itemThrow: ItemThrowSystem;
   readonly npcs: Map<string, NPCController>;
   readonly tasks: Map<string, TaskEventBinding>;
   readonly speechBubble: SpeechBubble;
@@ -73,6 +75,16 @@ export class SceneManager implements SceneActions {
           this.dependencies.floorItemSpacing,
         ),
       );
+      this.dependencies.itemThrow.bindScene(
+        installedRuntime.stage.object,
+        installedRuntime.stage.pickableItems,
+        (position, item, allItems) => installedRuntime.stage.isFloorDropPositionValid(
+          position,
+          item,
+          allItems,
+          this.dependencies.floorItemSpacing,
+        ),
+      );
 
       for (const item of installedRuntime.stage.pickableItems) {
         this.dependencies.interaction.register(item);
@@ -98,14 +110,15 @@ export class SceneManager implements SceneActions {
       this.currentRuntime = installedRuntime;
       candidate = null;
     } catch (error: unknown) {
-      candidate?.dispose();
       if (swapStarted) {
         this.dependencies.interaction.clearInteractables();
+        this.dependencies.itemThrow.unbindScene();
         this.dependencies.carry.unbindScene();
         this.dependencies.npcs.clear();
         this.dependencies.tasks.clear();
         this.currentRuntime = null;
       }
+      candidate?.dispose();
       const message = error instanceof Error ? error.message : String(error);
       throw new Error(`Failed to load Scene "${sceneId}": ${message}`, { cause: error });
     } finally {
@@ -123,6 +136,7 @@ export class SceneManager implements SceneActions {
 
   private detachCurrentScene(): void {
     this.dependencies.interaction.clearInteractables();
+    this.dependencies.itemThrow.unbindScene();
     this.dependencies.carry.unbindScene();
     this.dependencies.speechBubble.hide();
     this.dependencies.resultOverlay.hide();

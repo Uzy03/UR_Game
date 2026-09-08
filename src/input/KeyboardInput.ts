@@ -6,6 +6,9 @@ const MIN_MOVEMENT_TAP_MILLISECONDS = 80;
 const ACTION_BY_CODE = new Map<string, InputAction>([
   ['KeyE', InputAction.Interact],
   ['Space', InputAction.Interact],
+  ['ShiftLeft', InputAction.Dash],
+  ['ShiftRight', InputAction.Dash],
+  ['KeyQ', InputAction.Throw],
   ['KeyR', InputAction.Retry],
   ['KeyF', InputAction.Phone],
   ['Escape', InputAction.Back],

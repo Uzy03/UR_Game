@@ -45,6 +45,12 @@ export const GAME_CONFIG = {
     acceleration: 20,
     deceleration: 26,
     turnSharpness: 16,
+    dash: {
+      durationSeconds: 0.18,
+      speed: 8.8,
+      cooldownSeconds: 0.42,
+      inputDirectionThreshold: 0.1,
+    },
     collider: {
       radius: PLAYER_COLLIDER_RADIUS,
       halfHeight: PLAYER_COLLIDER_HALF_HEIGHT,
@@ -87,6 +93,14 @@ export const GAME_CONFIG = {
     facingPenalty: 0.85,
     floorDropDistance: 0.9,
     floorItemSpacing: 0.08,
+  },
+  itemThrow: {
+    distance: 3.6,
+    durationSeconds: 0.42,
+    arcHeight: 1.25,
+    minimumLandingDistance: 0.8,
+    landingSearchStep: 0.2,
+    inputDirectionThreshold: 0.1,
   },
   phase2: {
     taskDurationSeconds: 45,

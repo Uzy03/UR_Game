@@ -17,13 +17,13 @@ import { InteractionHighlight } from '../visual/InteractionHighlight';
 
 export type PickableItemKind = 'tomato' | 'box' | 'plate' | 'drink' | 'bundle';
 export type ItemProcessingState = 'raw' | 'processed';
-export type PickableItemPlacementState = 'world' | 'carried' | 'placed';
+export type PickableItemPlacementState = 'world' | 'carried' | 'placed' | 'thrown';
 
 export interface PickableItemRuntimeState {
   readonly parent: Object3D;
   readonly position: Vector3;
   readonly quaternion: Quaternion;
-  readonly placementState: PickableItemPlacementState;
+  readonly placementState: Exclude<PickableItemPlacementState, 'thrown'>;
   readonly processingState: ItemProcessingState;
   readonly active: boolean;
 }
@@ -168,6 +168,14 @@ export class PickableItem implements Interactable {
     return this.active && this.state === 'world';
   }
 
+  public get isThrown(): boolean {
+    return this.active && this.state === 'thrown';
+  }
+
+  public get canBePickedUp(): boolean {
+    return this.active && this.state !== 'carried' && this.state !== 'thrown';
+  }
+
   public get isActive(): boolean {
     return this.active;
   }
@@ -200,6 +208,18 @@ export class PickableItem implements Interactable {
     this.object.position.set(0, 0, 0);
     this.object.rotation.set(0, 0, 0);
     this.startVisualFeedback('pickup');
+  }
+
+  public beginThrow(parent: Object3D): boolean {
+    if (!this.active || this.state !== 'carried') {
+      return false;
+    }
+
+    parent.attach(this.object);
+    this.state = 'thrown';
+    this.setHighlighted(false);
+    this.resetVisualFeedback();
+    return true;
   }
 
   public placeAt(anchor: Object3D): void {
@@ -248,6 +268,9 @@ export class PickableItem implements Interactable {
   }
 
   public captureRuntimeState(): PickableItemRuntimeState {
+    if (this.state === 'thrown') {
+      throw new Error(`PickableItem "${this.id}" cannot be captured while airborne.`);
+    }
     const parent = this.object.parent;
     if (parent === null) {
       throw new Error(`PickableItem "${this.id}" has no parent to capture.`);

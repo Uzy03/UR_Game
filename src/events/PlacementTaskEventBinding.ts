@@ -1,6 +1,7 @@
 import type { Object3D, Vector3Like } from 'three';
 import type { CarrySystem } from '../interaction/CarrySystem';
 import type { InteractionSystem } from '../interaction/InteractionSystem';
+import type { ItemThrowSystem } from '../interaction/ItemThrowSystem';
 import type {
   PickableItem,
   PickableItemRuntimeState,
@@ -16,6 +17,7 @@ interface PlacementTaskEventBindingOptions {
   readonly task: Task;
   readonly carry: CarrySystem;
   readonly interaction: InteractionSystem;
+  readonly itemThrow: ItemThrowSystem;
   readonly items: readonly PickableItem[];
   readonly placePoints: readonly PlacePoint[];
   readonly player: PlayerController;
@@ -43,6 +45,7 @@ export class PlacementTaskEventBinding implements TaskEventBinding {
     const {
       carry,
       interaction,
+      itemThrow,
       items,
       placePoints,
       player,
@@ -52,6 +55,7 @@ export class PlacementTaskEventBinding implements TaskEventBinding {
       speechBubble,
     } = this.options;
 
+    itemThrow.cancelAll();
     interaction.reset();
     const preserveCurrentWorld = (
       this.options.preserveWorldOnFirstAttempt === true

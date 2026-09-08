@@ -1,6 +1,7 @@
 import type { Vector3Like } from 'three';
 import type { CarrySystem } from '../interaction/CarrySystem';
 import type { InteractionSystem } from '../interaction/InteractionSystem';
+import type { ItemThrowSystem } from '../interaction/ItemThrowSystem';
 import type { AssemblyStation } from '../interaction/AssemblyStation';
 import type { PickableItem } from '../interaction/PickableItem';
 import type { PlacePoint } from '../interaction/PlacePoint';
@@ -14,6 +15,7 @@ interface AssemblyTaskEventBindingOptions {
   readonly task: Task;
   readonly carry: CarrySystem;
   readonly interaction: InteractionSystem;
+  readonly itemThrow: ItemThrowSystem;
   readonly items: readonly PickableItem[];
   readonly placePoints: readonly PlacePoint[];
   readonly stations: readonly AssemblyStation[];
@@ -35,6 +37,7 @@ export class AssemblyTaskEventBinding implements TaskEventBinding {
     const {
       carry,
       interaction,
+      itemThrow,
       items,
       placePoints,
       player,
@@ -45,6 +48,7 @@ export class AssemblyTaskEventBinding implements TaskEventBinding {
       stations,
     } = this.options;
 
+    itemThrow.cancelAll();
     interaction.reset();
     carry.reset();
     for (const station of stations) {
