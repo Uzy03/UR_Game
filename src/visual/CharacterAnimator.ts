@@ -26,6 +26,16 @@ export interface CharacterPoseSample {
 }
 
 const INTERACTION_DURATION_SECONDS = 0.22;
+const DASH_FEEDBACK_DURATION_SECONDS = 0.2;
+const THROW_FEEDBACK_DURATION_SECONDS = 0.28;
+
+function actionImpulse(remainingSeconds: number, durationSeconds: number): number {
+  if (remainingSeconds <= 0) {
+    return 0;
+  }
+  const progress = Math.min(1, Math.max(0, 1 - remainingSeconds / durationSeconds));
+  return Math.sin(progress * Math.PI);
+}
 
 export function sampleCharacterPose(
   walkPhase: number,
@@ -46,6 +56,8 @@ export class CharacterAnimator {
   private idlePhase = 0;
   private movementAmount = 0;
   private interactionRemaining = 0;
+  private dashRemaining = 0;
+  private throwRemaining = 0;
 
   public constructor(private readonly rig: CharacterRig) {}
 
@@ -53,12 +65,22 @@ export class CharacterAnimator {
     this.interactionRemaining = INTERACTION_DURATION_SECONDS;
   }
 
+  public triggerDash(): void {
+    this.dashRemaining = DASH_FEEDBACK_DURATION_SECONDS;
+  }
+
+  public triggerThrow(): void {
+    this.throwRemaining = THROW_FEEDBACK_DURATION_SECONDS;
+  }
+
   public reset(): void {
     this.walkPhase = 0;
     this.idlePhase = 0;
     this.movementAmount = 0;
     this.interactionRemaining = 0;
-    this.applyPose(sampleCharacterPose(0, 0, 0), false, 0);
+    this.dashRemaining = 0;
+    this.throwRemaining = 0;
+    this.applyPose(sampleCharacterPose(0, 0, 0), false, 0, 0, 0);
   }
 
   public update(deltaSeconds: number, input: CharacterAnimationInput): void {
@@ -72,15 +94,21 @@ export class CharacterAnimator {
     this.idlePhase += delta * 2.1;
 
     this.interactionRemaining = Math.max(0, this.interactionRemaining - delta);
-    const interactionProgress = this.interactionRemaining <= 0
-      ? 0
-      : 1 - this.interactionRemaining / INTERACTION_DURATION_SECONDS;
-    const interactionImpulse = Math.sin(interactionProgress * Math.PI);
+    this.dashRemaining = Math.max(0, this.dashRemaining - delta);
+    this.throwRemaining = Math.max(0, this.throwRemaining - delta);
+    const interactionImpulse = actionImpulse(
+      this.interactionRemaining,
+      INTERACTION_DURATION_SECONDS,
+    );
+    const dashImpulse = actionImpulse(this.dashRemaining, DASH_FEEDBACK_DURATION_SECONDS);
+    const throwImpulse = actionImpulse(this.throwRemaining, THROW_FEEDBACK_DURATION_SECONDS);
 
     this.applyPose(
       sampleCharacterPose(this.walkPhase, this.idlePhase, this.movementAmount),
       input.carrying,
       interactionImpulse,
+      dashImpulse,
+      throwImpulse,
     );
   }
 
@@ -88,30 +116,58 @@ export class CharacterAnimator {
     pose: CharacterPoseSample,
     carrying: boolean,
     interactionImpulse: number,
+    dashImpulse: number,
+    throwImpulse: number,
   ): void {
     const carryBlend = carrying ? 1 : 0;
-    this.rig.visualRoot.position.y = pose.bodyBob + pose.idleBreath + interactionImpulse * 0.045;
-    this.rig.visualRoot.scale.set(
-      1 + interactionImpulse * 0.035,
-      1 - interactionImpulse * 0.025,
-      1 + interactionImpulse * 0.035,
+    this.rig.visualRoot.position.y = (
+      pose.bodyBob
+      + pose.idleBreath
+      + interactionImpulse * 0.045
+      + dashImpulse * 0.02
+      + throwImpulse * 0.025
     );
+    this.rig.visualRoot.scale.set(
+      1 + interactionImpulse * 0.035 - dashImpulse * 0.04,
+      1 - interactionImpulse * 0.025 - dashImpulse * 0.08,
+      1 + interactionImpulse * 0.035 + dashImpulse * 0.12,
+    );
+    this.rig.visualRoot.rotation.x = -dashImpulse * 0.12 + throwImpulse * 0.05;
+    this.rig.body.rotation.x = -dashImpulse * 0.18 + throwImpulse * 0.12;
     this.rig.body.rotation.z = Math.sin(this.walkPhase) * 0.035 * pose.movementAmount;
     this.rig.head.position.y = 0.54 + pose.idleBreath * 0.45;
     this.rig.head.rotation.z = -this.rig.body.rotation.z * 0.45;
 
     const freeArmSwing = pose.limbSwing * 0.82;
     const carryArmAngle = -1.02;
-    this.rig.leftArm.rotation.x = freeArmSwing * (1 - carryBlend) + carryArmAngle * carryBlend;
-    this.rig.rightArm.rotation.x = -freeArmSwing * (1 - carryBlend) + carryArmAngle * carryBlend;
+    this.rig.leftArm.rotation.x = (
+      freeArmSwing * (1 - carryBlend)
+      + carryArmAngle * carryBlend
+      - throwImpulse * 0.45
+    );
+    this.rig.rightArm.rotation.x = (
+      -freeArmSwing * (1 - carryBlend)
+      + carryArmAngle * carryBlend
+      - throwImpulse * 1.15
+    );
     this.rig.leftArm.rotation.z = -0.05 - carryBlend * 0.18;
     this.rig.rightArm.rotation.z = 0.05 + carryBlend * 0.18;
 
     this.rig.leftLeg.rotation.x = -pose.limbSwing;
     this.rig.rightLeg.rotation.x = pose.limbSwing;
 
-    const shadowScale = 1 - pose.bodyBob * 0.5 - interactionImpulse * 0.06;
-    const shadowOpacity = 1 - pose.bodyBob * 1.8 - interactionImpulse * 0.18;
+    const shadowScale = (
+      1
+      - pose.bodyBob * 0.5
+      - interactionImpulse * 0.06
+      - dashImpulse * 0.05
+    );
+    const shadowOpacity = (
+      1
+      - pose.bodyBob * 1.8
+      - interactionImpulse * 0.18
+      - dashImpulse * 0.08
+    );
     this.rig.contactShadow.setStrength(shadowScale, shadowOpacity);
   }
 }

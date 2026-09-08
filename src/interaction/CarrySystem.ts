@@ -46,7 +46,7 @@ export class CarrySystem {
       this.carriedItem !== null
       || this.sceneBinding === null
       || !this.sceneBinding.allItems.includes(item)
-      || !item.isActive
+      || !item.canBePickedUp
     ) {
       return false;
     }
@@ -60,6 +60,18 @@ export class CarrySystem {
     const item = this.carriedItem;
     this.carriedItem = null;
     return item;
+  }
+
+  public releaseForThrow(expectedItem: PickableItem, worldRoot: Object3D): boolean {
+    if (this.carriedItem !== expectedItem) {
+      return false;
+    }
+    if (!expectedItem.beginThrow(worldRoot)) {
+      return false;
+    }
+
+    this.carriedItem = null;
+    return true;
   }
 
   public canDropToFloor(position: Readonly<Vector3Like>): boolean {

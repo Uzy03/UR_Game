@@ -1,6 +1,6 @@
-# Anniversary Game — Phase 17
+# Anniversary Game — Phase 18
 
-交際1周年記念の短編3Dゲームです。Phase 17では、Phase 16の`campaign-cafe`で確立した「Warm Miniature Memory」のvisual languageを全Campaign locationへ展開し、既存gameplayを変えずにSceneごとの視覚的な個性を加えています。
+交際1周年記念の短編3Dゲームです。Phase 18では、既存の移動・Interaction・Carryを保ったまま、短距離のDashと床へ着地するThrowのaction基盤を追加しています。
 
 ## 実行
 
@@ -9,12 +9,14 @@ npm install
 npm run dev
 ```
 
-型チェックを含む本番ビルドは`npm run build`、Phase 17までのブラウザ非依存検証は`npm run validate:phase17`、ビルド結果の確認は`npm run preview`で行えます。
+型チェックを含む本番ビルドは`npm run build`、Phase 18までのブラウザ非依存検証は`npm run validate:phase18`、ビルド結果の確認は`npm run preview`で行えます。
 
 ## 操作
 
 - `W` / `A` / `S` / `D`: 移動
-- `E` / `Space`: 話す・会話を進める・アイテムを拾う／置く
+- `Space`: 移動入力方向（無入力時は向いている方向）へDash
+- `Q`: 持っているアイテムを前方の床へThrow
+- `E`: 話す・会話を進める・アイテムを拾う／置く
 - `R`: 時間切れ画面からタスクをリトライ
 - `F`: 通常探索中にスマートフォンを開く／閉じる
 - `Escape`: スマートフォン内で戻る。Homeでは閉じる
@@ -38,28 +40,32 @@ New Gameのユーザー操作後にMain BGMが始まり、Transition CardとMemo
 
 1. 入力ソースを更新し、移動方向へ集約する
 2. Phone入力を処理し、必要ならそのフレームからゲーム入力を止める
-3. 現在SceneのNPCを更新する
-4. プレイヤーがRapierへ移動要求を送る
-5. 物理ワールドを進め、解決後の座標へ描画モデルを同期する
-6. インタラクションとEventRunnerを更新する
-7. EventRunnerから独立したAudio fadeを更新する
-8. 追従カメラとNPC吹き出しを更新する
-9. Three.jsで描画する
+3. Throw Actionと飛行中アイテムを更新する
+4. 現在SceneのNPCを更新する
+5. プレイヤーが通常移動とDashを同じRapier Character Controllerへ送る
+6. 物理ワールドを進め、解決後の座標へ描画モデルを同期する
+7. インタラクションとEventRunnerを更新する
+8. EventRunnerから独立したAudio fadeを更新する
+9. 追従カメラとNPC吹き出しを更新する
+10. Three.jsで描画する
 
 バックグラウンド復帰時の大きな移動を避けるため、1フレームの `deltaTime` には上限を設けています。
 
 ## 設計の境界
 
 - `Game`: 初期化、ライフサイクル、ゲームループ、リサイズ
-- `KeyboardInput`: DOMのキーボードイベントを方向入力へ変換
+- `KeyboardInput`: DOMのキーコードを抽象Actionと方向入力へ変換
 - `InputManager`: 複数の入力ソースを統合し、長さ1以内へ正規化
 - `PhysicsWorld`: Rapierの初期化、静的コライダー、物理ステップ、Scene所有Bodyの削除ハンドル
 - `KinematicCharacter`: RapierのCharacter Controllerによる補正移動
-- `PlayerController`: 抽象化された移動入力へframe-rate非依存の加減速を適用し、Rapier移動と向きを更新
+- `PlayerController`: 抽象化された移動・Dash入力を同じRapier移動要求へ統合し、向きを更新
 - `MovementSmoothing`: 入力方向と現在速度から加速・減速・反転を計算する純ロジック
+- `DashState`: Dash方向・継続時間・cooldownをframe-rate非依存で管理
+- `PlanarActionDirection`: Dash／Throwで共有する「移動入力、なければ向き」のXZ方向解決
 - `InteractionSystem`: プレイヤー前方の操作対象選択、Action入力、ハイライト、操作ヒント、成功時visual feedback通知
 - `CarrySystem`: 1個だけの保持状態、安全な床ドロップ、現在Sceneへの再binding
-- `PickableItem`: 加工状態とactive状態を独立して持ち、pickup pop／placement settleを描画だけで行う持ち運び可能アイテム
+- `ItemThrowSystem`: Throw要求、Stageの床判定を使う着地点探索、決定的な放物線、飛行中Itemのcleanupを管理
+- `PickableItem`: 加工状態・active状態とworld／carried／placed／thrownを独立して持つ持ち運び可能アイテム
 - `PlacePoint`: 空き・配置済み状態と、台への配置・再取得
 - `ProcessingStation`: 1個のItemの配置、deltaTime加工、進捗表示、加工済みItemの再取得
 - `AssemblyStation`: 2個の入力Item、deltaTime組立、入力の無効化、完成Itemの有効化と再取得

@@ -39,6 +39,7 @@ import { InputManager } from '../input/InputManager';
 import { KeyboardInput } from '../input/KeyboardInput';
 import { CarrySystem } from '../interaction/CarrySystem';
 import { InteractionSystem } from '../interaction/InteractionSystem';
+import { ItemThrowSystem } from '../interaction/ItemThrowSystem';
 import { NPCController } from '../npc/NPCController';
 import { PhysicsWorld } from '../physics/PhysicsWorld';
 import { PhoneContentRegistry } from '../phone/PhoneContentRegistry';
@@ -82,6 +83,7 @@ export class Game {
   private readonly player: PlayerController;
   private readonly carry: CarrySystem;
   private readonly interaction: InteractionSystem;
+  private readonly itemThrow: ItemThrowSystem;
   private readonly eventRunner: EventRunner;
   private readonly audio: AudioManager;
   private readonly audioMediaFactory: BrowserAudioMediaFactory;
@@ -139,10 +141,20 @@ export class Game {
       deceleration: GAME_CONFIG.player.deceleration,
       turnSharpness: GAME_CONFIG.player.turnSharpness,
       groundProbeSpeed: GAME_CONFIG.physics.groundProbeSpeed,
+      dash: GAME_CONFIG.player.dash,
     });
     this.scene.add(this.player.object);
 
     this.carry = new CarrySystem(this.player.carryAnchor);
+    this.itemThrow = new ItemThrowSystem(
+      this.input,
+      this.player,
+      this.carry,
+      {
+        ...GAME_CONFIG.itemThrow,
+        landingSpacing: GAME_CONFIG.interaction.floorItemSpacing,
+      },
+    );
     const carry = this.carry;
     this.interaction = new InteractionSystem(
       this.input,
@@ -243,6 +255,7 @@ export class Game {
       player: this.player,
       carry,
       interaction: this.interaction,
+      itemThrow: this.itemThrow,
       npcs: this.npcs,
       tasks: this.tasks,
       speechBubble: this.speechBubble,
@@ -253,6 +266,7 @@ export class Game {
         player: this.player,
         carry,
         interaction: this.interaction,
+        itemThrow: this.itemThrow,
         resultOverlay,
         speechBubble: this.speechBubble,
         createNpcInteractionHandler: (sceneId, npcId) => {
@@ -363,8 +377,10 @@ export class Game {
     this.audioMediaFactory.dispose();
     this.phone.dispose();
     this.sceneManager.dispose();
+    this.itemThrow.dispose();
     this.interaction.dispose();
     this.input.dispose();
+    this.player.dispose();
     this.physics.dispose();
 
     this.scene.traverse((object) => {
@@ -394,6 +410,7 @@ export class Game {
     // Controllers submit movement before the physics step; visuals only read the resolved pose afterward.
     this.input.update();
     this.phone.update();
+    this.itemThrow.update(deltaSeconds);
     for (const npc of this.npcs.values()) {
       npc.update(deltaSeconds);
     }

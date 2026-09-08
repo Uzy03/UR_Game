@@ -8,7 +8,7 @@ export class InteractionPrompt {
       return;
     }
 
-    this.element.textContent = `E / Space : ${label}`;
+    this.element.textContent = `E : ${label}`;
     this.element.hidden = false;
   }
 }

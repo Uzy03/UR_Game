@@ -8,6 +8,7 @@ import type { CarrySystem } from '../interaction/CarrySystem';
 import { AssemblyStation } from '../interaction/AssemblyStation';
 import type { Interactable } from '../interaction/Interactable';
 import type { InteractionSystem } from '../interaction/InteractionSystem';
+import type { ItemThrowSystem } from '../interaction/ItemThrowSystem';
 import { ProcessingStation } from '../interaction/ProcessingStation';
 import { NPCController } from '../npc/NPCController';
 import type { PhysicsWorld } from '../physics/PhysicsWorld';
@@ -32,6 +33,7 @@ export interface SceneRuntimeDependencies {
   readonly player: PlayerController;
   readonly carry: CarrySystem;
   readonly interaction: InteractionSystem;
+  readonly itemThrow: ItemThrowSystem;
   readonly resultOverlay: ResultOverlay;
   readonly speechBubble: SpeechBubble;
   readonly createNpcInteractionHandler: NpcInteractionHandlerFactory;
@@ -150,6 +152,7 @@ export class SceneRuntime {
           task,
           carry: dependencies.carry,
           interaction: dependencies.interaction,
+          itemThrow: dependencies.itemThrow,
           items: activeStage.pickableItems,
           placePoints: activeStage.placePoints,
           player: dependencies.player,
@@ -202,6 +205,7 @@ export class SceneRuntime {
           task,
           carry: dependencies.carry,
           interaction: dependencies.interaction,
+          itemThrow: dependencies.itemThrow,
           items: activeStage.pickableItems,
           placePoints: activeStage.placePoints,
           stations: processingStations,
@@ -225,6 +229,7 @@ export class SceneRuntime {
           task,
           carry: dependencies.carry,
           interaction: dependencies.interaction,
+          itemThrow: dependencies.itemThrow,
           items: activeStage.pickableItems,
           placePoints: activeStage.placePoints,
           stations: assemblyStations,
