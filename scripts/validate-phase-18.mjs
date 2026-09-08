@@ -67,15 +67,27 @@ try {
 
   const keyboardTarget = new EventTarget();
   const keyboard = new KeyboardInput(keyboardTarget);
+  const dashDown = dispatchKeyboardCode(keyboardTarget, 'keydown', 'Space');
+  assert.equal(dashDown.defaultPrevented, true);
+  keyboard.update();
+  assert.equal(keyboard.wasActionPressed(InputAction.Dash), true);
+  assert.equal(keyboard.wasActionPressed(InputAction.Interact), false);
+  assert.equal(keyboard.isActionPressed(InputAction.Dash), true);
+  keyboard.update();
+  assert.equal(keyboard.wasActionPressed(InputAction.Dash), false);
+  dispatchKeyboardCode(keyboardTarget, 'keyup', 'Space');
+
+  dispatchKeyboardCode(keyboardTarget, 'keydown', 'KeyE');
+  keyboard.update();
+  assert.equal(keyboard.wasActionPressed(InputAction.Interact), true);
+  assert.equal(keyboard.wasActionPressed(InputAction.Dash), false);
+  dispatchKeyboardCode(keyboardTarget, 'keyup', 'KeyE');
+
   for (const code of ['ShiftLeft', 'ShiftRight']) {
-    const down = dispatchKeyboardCode(keyboardTarget, 'keydown', code);
-    assert.equal(down.defaultPrevented, true);
-    keyboard.update();
-    assert.equal(keyboard.wasActionPressed(InputAction.Dash), true);
-    assert.equal(keyboard.isActionPressed(InputAction.Dash), true);
+    const shiftDown = dispatchKeyboardCode(keyboardTarget, 'keydown', code);
+    assert.equal(shiftDown.defaultPrevented, false);
     keyboard.update();
     assert.equal(keyboard.wasActionPressed(InputAction.Dash), false);
-    dispatchKeyboardCode(keyboardTarget, 'keyup', code);
   }
   dispatchKeyboardCode(keyboardTarget, 'keydown', 'KeyQ');
   keyboard.update();
@@ -418,6 +430,21 @@ try {
   );
   assert.match(sceneManagerSource, /itemThrow\.unbindScene\(\)/);
   assert.match(sceneManagerSource, /stage\.isFloorDropPositionValid/);
+
+  const runtimeHtml = await readFile(new URL('../index.html', import.meta.url), 'utf8');
+  assert.match(runtimeHtml, /Anniversary Game — Phase 18/);
+  assert.match(runtimeHtml, /Phase 18 Dash &amp; Throw/);
+  assert.match(runtimeHtml, /<kbd>Space<\/kbd> Dash/);
+  assert.match(runtimeHtml, /<kbd>E<\/kbd> Interact/);
+  assert.match(runtimeHtml, /<kbd>Q<\/kbd> Throw/);
+  assert.doesNotMatch(runtimeHtml, /E \/ Space/);
+  assert.doesNotMatch(runtimeHtml, /<kbd>Shift/);
+
+  const interactionPromptSource = await readFile(
+    new URL('../src/ui/InteractionPrompt.ts', import.meta.url),
+    'utf8',
+  );
+  assert.match(interactionPromptSource, /`E : \$\{label\}`/);
 
   console.log('Phase 18 browser-free validation passed.');
 } finally {

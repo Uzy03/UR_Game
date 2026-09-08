@@ -4,10 +4,11 @@ Phase 18は既存のPhase 17 gameplayへ、抽象ActionとしてDashと床着地
 
 ## Input
 
-- `Dash`: `ShiftLeft` / `ShiftRight`
+- `Dash`: `Space`
+- `Interact`: `KeyE`
 - `Throw`: `KeyQ`
 - キーコードは`KeyboardInput`だけが知り、gameplay側は`InputAction`を消費する。
-- どちらもkeydown edgeを使うため、押しっぱなしで再発火しない。
+- 各Actionはkeydown edgeを使うため、押しっぱなしで再発火しない。
 
 ## Dash
 
