@@ -17,6 +17,7 @@ import { AudioManager } from '../audio/AudioManager';
 import { BrowserAudioMediaFactory } from '../audio/BrowserAudioMediaFactory';
 import { FollowCamera } from '../camera/FollowCamera';
 import { GAME_CONFIG } from '../config/gameConfig';
+import { clampFrameDeltaSeconds } from './FrameDelta';
 import {
   PHASE5_DEMO_SEQUENCE,
   PHASE5_GARDEN_TALK_SEQUENCE,
@@ -384,7 +385,10 @@ export class Game {
 
   private readonly frame = (timestamp: number): void => {
     const unboundedDelta = (timestamp - this.lastFrameTime) / 1000;
-    const deltaSeconds = Math.min(unboundedDelta, GAME_CONFIG.loop.maxDeltaSeconds);
+    const deltaSeconds = clampFrameDeltaSeconds(
+      unboundedDelta,
+      GAME_CONFIG.loop.maxDeltaSeconds,
+    );
     this.lastFrameTime = timestamp;
 
     // Controllers submit movement before the physics step; visuals only read the resolved pose afterward.

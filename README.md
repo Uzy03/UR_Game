@@ -1,6 +1,6 @@
-# Anniversary Game — Phase 16
+# Anniversary Game — Phase 17
 
-交際1周年記念の短編3Dゲームです。Phase 16では既存のゲーム／private content基盤を維持しながら、`campaign-cafe`を「Warm Miniature Memory」方向のビジュアル・操作感vertical sliceへ更新しています。
+交際1周年記念の短編3Dゲームです。Phase 17では、Phase 16の`campaign-cafe`で確立した「Warm Miniature Memory」のvisual languageを全Campaign locationへ展開し、既存gameplayを変えずにSceneごとの視覚的な個性を加えています。
 
 ## 実行
 
@@ -9,7 +9,7 @@ npm install
 npm run dev
 ```
 
-型チェックを含む本番ビルドは`npm run build`、Phase 16のブラウザ非依存検証は`npm run validate:phase16`、ビルド結果の確認は`npm run preview`で行えます。
+型チェックを含む本番ビルドは`npm run build`、Phase 17までのブラウザ非依存検証は`npm run validate:phase17`、ビルド結果の確認は`npm run preview`で行えます。
 
 ## 操作
 
@@ -69,6 +69,7 @@ New Gameのユーザー操作後にMain BGMが始まり、Transition CardとMemo
 - `ContactShadow`: Characterを床へ視覚的に接地させる低コストblob shadow
 - `InteractionHighlight`: 選択中のringへ控えめなpulseを適用
 - `Stage`: Scene定義から表示物・静的コライダー・任意のvisual-only decorationを構築し、所有Resourceを破棄
+- `createStageDecoration`: Stageから分離したprimitive decoration生成だけを担当し、Collider・Interaction・Save stateを作らない
 - `SceneContentRegistry`: Scene定義のID解決と静的検証
 - `SceneRuntime`: 1つのSceneに属するStage・NPC・Task Bindingの実体とcleanup
 - `SceneManager`: Scene Runtimeの同期生成・交換・破棄とglobal systemの再binding
@@ -111,11 +112,11 @@ New Gameのユーザー操作後にMain BGMが始まり、Transition CardとMemo
 
 CampaignのScene、Phone content、Transition Card、Audio content、canonical Event Sequence、Checkpointは`src/content/campaign/`に分離しています。`campaignContent.ts`は検証済みStoryを固定のCampaign構造へ注入し、旧Phase 6〜10データと合わせてRegistryへ渡す薄いfactoryです。runtime managerではありません。CheckpointのresumeSequenceはcanonical segment列のsuffixから生成するため、Story本文・Transition Card・Audio CueをCheckpointごとに複製しません。
 
-Cafeのpaletteと10個の装飾groupは`campaignVisualStyle.ts`にあり、Story JSONやSaveへ入りません。Phase 16では`campaign-cafe`とそのcompleted Sceneだけがこのvisual sliceを使用し、他Sceneへの全面展開は後続判断へ残しています。詳細は[`docs/phase-16-spec.md`](docs/phase-16-spec.md)を参照してください。
+全Campaign locationのpaletteと装飾groupは`campaignVisualStyle.ts`にあり、Story JSONやSaveへ入りません。CafeはPhase 16のreference qualityを維持し、Bedroom、Park、Prep Space、Viewpoint、Ending Roomは共通のminiature language内で個別のmoodとsilhouetteを持ちます。詳細は[`docs/phase-17-spec.md`](docs/phase-17-spec.md)を参照してください。
 
-Campaign専用の`Chapter`、`CampaignManager`、新しいTaskは追加していません。Phase 16でもGameEventの種類は増やしていません。`SceneManager`、Task、PhoneControllerはStory loaderを知らず、旧Phase 6〜12のScene・Phone content・Checkpointもv1 Save互換のため登録を維持しています。
+Campaign専用の`Chapter`、`CampaignManager`、新しいTaskは追加していません。Phase 17でもGameEventの種類は増やしていません。`SceneManager`、Task、PhoneControllerはStory loaderを知らず、旧Phase 6〜12のScene・Phone content・Checkpointもv1 Save互換のため登録を維持しています。
 
-`localStorage`ではGame Saveの`ur-game:save:v1`とPhone進行の`ur-game:phone-progress:v1`を分離しています。Phase 16でも両schemaはv1のままです。current BGM、再生位置、Mute、volume、unlock状態は保存せず、Checkpointのcanonical resume sequenceが適切なBGM Cueを再指定します。
+`localStorage`ではGame Saveの`ur-game:save:v1`とPhone進行の`ur-game:phone-progress:v1`を分離しています。Phase 17でも両schemaはv1のままです。current BGM、再生位置、Mute、volume、unlock状態は保存せず、Checkpointのcanonical resume sequenceが適切なBGM Cueを再指定します。
 
 入力ソースやゲームループの境界を保ち、キーコードは`KeyboardInput`のみに閉じ込めています。アイテムは操作性を優先してDynamicRigidBodyにせず、床・保持・PlacePointへの配置状態を明示的に切り替えています。
 

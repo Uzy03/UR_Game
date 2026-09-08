@@ -30,9 +30,17 @@ export interface StagePlacePointDefinition {
 }
 
 export type StageDecorationKind =
+  | 'bed'
+  | 'bench'
   | 'chair'
+  | 'flower-cluster'
+  | 'gift'
+  | 'lamp'
+  | 'railing'
+  | 'rock'
   | 'rug'
   | 'plant'
+  | 'tree'
   | 'wall-art'
   | 'shelf'
   | 'table-setting'

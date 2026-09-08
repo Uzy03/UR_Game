@@ -22,7 +22,8 @@ const PLAYER_GROUNDED_Y = (
 
 export const GAME_CONFIG = {
   loop: {
-    maxDeltaSeconds: 1 / 20,
+    // 100 ms preserves real-time behavior down to 10 FPS while still discarding tab-resume stalls.
+    maxDeltaSeconds: 1 / 10,
   },
   renderer: {
     maxPixelRatio: 2,
