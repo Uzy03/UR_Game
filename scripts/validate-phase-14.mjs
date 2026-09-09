@@ -110,17 +110,17 @@ try {
   const publicSequences = createSequences(FICTIONAL_CAMPAIGN_STORY);
   const privateSequences = createSequences(loadedPrivate);
   assert.deepEqual(publicSequences.segmentEventCounts, {
-    prologue: 10,
-    meeting: 9,
-    outing: 18,
-    preparation: 17,
-    journey: 16,
-    ending: 16,
+    prologue: 8,
+    meeting: 14,
+    outing: 19,
+    preparation: 18,
+    journey: 17,
+    ending: 17,
   });
-  assert.equal(publicSequences.main.events.length, 86);
+  assert.equal(publicSequences.main.events.length, 8);
   assert.equal(
     publicSequences.main.events.filter((event) => event.type === 'audio_cue').length,
-    16,
+    1,
   );
 
   const mechanicalSignature = (event) => {
@@ -139,27 +139,32 @@ try {
       case 'change_scene': return [event.type, event.sceneId];
       case 'set_checkpoint': return [event.type, event.checkpointId];
       case 'wait': return [event.type, event.durationSeconds];
+      case 'world_map': return [
+        event.type,
+        event.action,
+        event.nodeId ?? null,
+        event.bgmId ?? null,
+      ];
       default: throw new Error(`Unexpected event type ${event.type}`);
     }
   };
-  assert.deepEqual(
-    publicSequences.main.events.map(mechanicalSignature),
-    privateSequences.main.events.map(mechanicalSignature),
-  );
-
-  let suffixStart = 0;
-  const suffixes = [
-    ['prologue', null],
-    ['meeting', publicSequences.afterMeeting],
-    ['outing', publicSequences.afterOuting],
-    ['preparation', publicSequences.afterPreparation],
-    ['journey', publicSequences.beforeEnding],
+  const pairedSequences = [
+    [publicSequences.main, privateSequences.main],
+    ...Object.keys(publicSequences.routeEntries).map((segment) => [
+      publicSequences.routeEntries[segment],
+      privateSequences.routeEntries[segment],
+    ]),
+    [publicSequences.afterMeeting, privateSequences.afterMeeting],
+    [publicSequences.afterOuting, privateSequences.afterOuting],
+    [publicSequences.afterPreparation, privateSequences.afterPreparation],
+    [publicSequences.beforeEnding, privateSequences.beforeEnding],
+    [publicSequences.complete, privateSequences.complete],
   ];
-  for (const [segment, suffix] of suffixes) {
-    suffixStart += publicSequences.segmentEventCounts[segment];
-    if (suffix !== null) {
-      assert.deepEqual(suffix.events, publicSequences.main.events.slice(suffixStart));
-    }
+  for (const [publicSequence, privateSequence] of pairedSequences) {
+    assert.deepEqual(
+      publicSequence.events.map(mechanicalSignature),
+      privateSequence.events.map(mechanicalSignature),
+    );
   }
 
   const publicPhone = createCampaignPhoneContent(FICTIONAL_CAMPAIGN_STORY);

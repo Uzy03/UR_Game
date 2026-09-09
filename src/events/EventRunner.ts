@@ -18,6 +18,7 @@ import type { EventSequence } from './EventTypes';
 import type { TaskEventBinding } from './TaskEventBinding';
 import type { TransitionActions } from './TransitionActions';
 import { assertValidTransitionCardDefinition } from './TransitionCardValidation';
+import type { WorldMapActions } from '../world/WorldMapActions';
 
 export type EventRunnerState = 'idle' | 'running' | 'completed' | 'cancelled' | 'error';
 
@@ -45,6 +46,7 @@ interface EventRunnerDependencies {
   readonly checkpoints: CheckpointActions;
   readonly transition: TransitionActions;
   readonly audio: AudioActions;
+  readonly worldMap: WorldMapActions;
 }
 
 interface EventRunnerOptions {
@@ -177,6 +179,7 @@ export class EventRunner {
       case 'change_scene':
       case 'set_checkpoint':
       case 'audio_cue':
+      case 'world_map':
         // Synchronous service events complete during beginCurrentEvent().
         break;
       case 'phone_story':
@@ -396,6 +399,19 @@ export class EventRunner {
       }
       case 'audio_cue':
         this.runImmediateEvent(event.type, () => this.dispatchAudioCue(event.cue));
+        break;
+      case 'world_map':
+        this.setGameplayEnabled(false);
+        this.runImmediateEvent(event.type, () => {
+          if (event.action === 'show') {
+            if (event.bgmId !== undefined) {
+              this.dependencies.audio.playBgm(event.bgmId);
+            }
+            this.dependencies.worldMap.showWorldMap();
+          } else {
+            this.dependencies.worldMap.completeNodeAndShow(event.nodeId);
+          }
+        });
         break;
       default: {
         const unsupported = event as { readonly type?: unknown };

@@ -432,8 +432,8 @@ try {
   assert.match(sceneManagerSource, /stage\.isFloorDropPositionValid/);
 
   const runtimeHtml = await readFile(new URL('../index.html', import.meta.url), 'utf8');
-  assert.match(runtimeHtml, /Anniversary Game — Phase 18/);
-  assert.match(runtimeHtml, /Phase 18 Dash &amp; Throw/);
+  assert.match(runtimeHtml, /Anniversary Game — Phase 19/);
+  assert.match(runtimeHtml, /Phase 19 World Map/);
   assert.match(runtimeHtml, /<kbd>Space<\/kbd> Dash/);
   assert.match(runtimeHtml, /<kbd>E<\/kbd> Interact/);
   assert.match(runtimeHtml, /<kbd>Q<\/kbd> Throw/);
