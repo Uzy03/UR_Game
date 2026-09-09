@@ -1,6 +1,6 @@
-# Anniversary Game — Phase 18
+# Anniversary Game — Phase 19
 
-交際1周年記念の短編3Dゲームです。Phase 18では、既存の移動・Interaction・Carryを保ったまま、短距離のDashと床へ着地するThrowのaction基盤を追加しています。
+交際1周年記念の短編3Dゲームです。Phase 19では、BedroomのPrologueと各Campaign stageの間に、グレーの小型車で`1-1`〜`1-5`を巡るWorld Map progressionを追加しています。
 
 ## 実行
 
@@ -9,7 +9,7 @@ npm install
 npm run dev
 ```
 
-型チェックを含む本番ビルドは`npm run build`、Phase 18までのブラウザ非依存検証は`npm run validate:phase18`、ビルド結果の確認は`npm run preview`で行えます。
+型チェックを含む本番ビルドは`npm run build`、Phase 19までのブラウザ非依存検証は`npm run validate:phase19`、ビルド結果の確認は`npm run preview`で行えます。
 
 ## 操作
 
@@ -22,7 +22,9 @@ npm run dev
 - `Escape`: スマートフォン内で戻る。Homeでは閉じる
 - `Sound On` / `Sound Off`: 画面右上のボタンでsession中のBGMとSEをMute
 
-起動時のStart Menuで`New Game`を選ぶと、架空の`campaign-bedroom`から始まります。Phone Storyを起点にCafe、Park、Preparation Space、Viewpoint、Ending Roomを順に巡り、Placement、Reach、Processing、Assemblyを一つの物語として体験します。Campaignは6つの安全なCheckpointと段階的なMessage／Photo解放を持ちます。
+World Mapでは`WASD`で車を動かし、現在availableなnodeの近くで`E`を押してstageへ入ります。`Space` Dash、`Q` Throw、PhoneはWorld Mapでは無効です。
+
+起動時のStart Menuで`New Game`を選ぶと、架空の`campaign-bedroom`から始まります。Prologue後はWorld Mapへ移り、`1-1 Cafe`、`1-2 Park`、`1-3 Preparation Space`、`1-4 Viewpoint`、`1-5 Ending Room`を順番に解放します。Phase 19ではlocked／completed nodeへ入れず、完了stage replayも行いません。
 
 任意の`public/private/campaign-story.json`が存在すると、ゲーム構造を変えずにCampaignのストーリー本文、NPC名、Objective、Task HUDを差し替えます。private写真は`/private/photos/`配下だけを許可します。設定方法と公開時の注意は[`docs/private-content.md`](docs/private-content.md)を参照してください。ファイルがなければ公開の架空ストーリーを使用し、存在するファイルが不正な場合は画面上の起動エラーで停止します。
 
@@ -40,14 +42,12 @@ New Gameのユーザー操作後にMain BGMが始まり、Transition CardとMemo
 
 1. 入力ソースを更新し、移動方向へ集約する
 2. Phone入力を処理し、必要ならそのフレームからゲーム入力を止める
-3. Throw Actionと飛行中アイテムを更新する
-4. 現在SceneのNPCを更新する
-5. プレイヤーが通常移動とDashを同じRapier Character Controllerへ送る
-6. 物理ワールドを進め、解決後の座標へ描画モデルを同期する
-7. インタラクションとEventRunnerを更新する
-8. EventRunnerから独立したAudio fadeを更新する
-9. 追従カメラとNPC吹き出しを更新する
-10. Three.jsで描画する
+3. World Map activeなら車両とnode interactionだけを更新する
+4. Campaign stage activeならThrow、NPC、Player、Rapier、Interactionを更新する
+5. EventRunnerを更新し、完了したmap遷移要求をcommitする
+6. EventRunnerから独立したAudio fadeを更新する
+7. 現在mode専用の追従カメラとNPC吹き出しを更新する
+8. Three.jsで描画する
 
 バックグラウンド復帰時の大きな移動を避けるため、1フレームの `deltaTime` には上限を設けています。
 
@@ -79,6 +79,12 @@ New Gameのユーザー操作後にMain BGMが始まり、Transition CardとMemo
 - `SceneContentRegistry`: Scene定義のID解決と静的検証
 - `SceneRuntime`: 1つのSceneに属するStage・NPC・Task Bindingの実体とcleanup
 - `SceneManager`: Scene Runtimeの同期生成・交換・破棄とglobal systemの再binding
+- `WorldRoute`: 5つのnode、entry sequence、completion checkpoint、canonical vehicle spawnを検証・解決
+- `WorldProgressStore`: `ur-game:world-progress:v1`だけを保存し、既知nodeからなるprefix以外を拒否
+- `WorldProgress`: available frontier、node完了、checkpointからの決定的なprefix再構築
+- `WorldMapController`: Campaignとは別modeの入力、node entry、map表示切替、専用camera、遅延mode commitを調停
+- `WorldMapRuntime`: miniature island、road、node marker、generic gray vehicleのvisual rootを所有
+- `WorldMapVehicle`: 正規化済み方向入力から単純な平面移動・向き・小さなvisual responseを更新
 - `NPCController`: NPCのInteractable対応、直線移動、向き、実移動量ベースのvisual animation、明示的なcleanup
 - `DialogueManager`: データで渡された会話の現在行と終了を管理
 - `TaskManager`: 実行中タスクと完了通知を管理
@@ -122,9 +128,11 @@ CampaignのScene、Phone content、Transition Card、Audio content、canonical E
 
 Campaign専用の`Chapter`、`CampaignManager`、新しいTaskは追加していません。Phase 17でもGameEventの種類は増やしていません。`SceneManager`、Task、PhoneControllerはStory loaderを知らず、旧Phase 6〜12のScene・Phone content・Checkpointもv1 Save互換のため登録を維持しています。
 
-`localStorage`ではGame Saveの`ur-game:save:v1`とPhone進行の`ur-game:phone-progress:v1`を分離しています。Phase 17でも両schemaはv1のままです。current BGM、再生位置、Mute、volume、unlock状態は保存せず、Checkpointのcanonical resume sequenceが適切なBGM Cueを再指定します。
+`localStorage`ではGame Saveの`ur-game:save:v1`、Phone進行の`ur-game:phone-progress:v1`、World進行の`ur-game:world-progress:v1`を分離しています。既存2 schemaは変更せず、World進行は`{ version: 1, completedNodeIds: string[] }`だけを持ちます。旧saveにWorld進行がなくても、canonical checkpointから完了prefixを再構築します。車両座標、camera、hover状態は保存しません。
 
 入力ソースやゲームループの境界を保ち、キーコードは`KeyboardInput`のみに閉じ込めています。アイテムは操作性を優先してDynamicRigidBodyにせず、床・保持・PlacePointへの配置状態を明示的に切り替えています。
+
+World Mapの構成、route ID、save互換、sequence境界は[`docs/phase-19-spec.md`](docs/phase-19-spec.md)を参照してください。World Mapはfictionalなpublic構造だけで、実在住所・地理・車種・ナンバーなどの個人情報を持ちません。
 
 ## Placeholder Audio
 

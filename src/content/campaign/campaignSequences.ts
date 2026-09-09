@@ -40,6 +40,13 @@ import {
 import type { CampaignPhoneStoryCards } from './campaignPhoneStory';
 import type { CampaignStoryDefinition } from './CampaignStoryTypes';
 import type { CampaignTransitionCards } from './campaignTransitionCards';
+import {
+  CAMPAIGN_ROUTE_ENDING_ID,
+  CAMPAIGN_ROUTE_JOURNEY_ID,
+  CAMPAIGN_ROUTE_MEETING_ID,
+  CAMPAIGN_ROUTE_OUTING_ID,
+  CAMPAIGN_ROUTE_PREPARATION_ID,
+} from './campaignWorldRoute';
 
 type CampaignSegmentKey =
   | 'prologue'
@@ -93,6 +100,7 @@ const PLAY_ENDING_CHIME_EVENT = {
 
 export interface CampaignSequences {
   readonly main: EventSequence;
+  readonly routeEntries: Readonly<Record<Exclude<CampaignSegmentKey, 'prologue'>, EventSequence>>;
   readonly afterMeeting: EventSequence;
   readonly afterOuting: EventSequence;
   readonly afterPreparation: EventSequence;
@@ -139,6 +147,13 @@ export function createCampaignSequences(
         text: story.prologue.meetObjectiveText,
       },
     },
+    {
+      type: 'world_map',
+      action: 'show',
+    },
+  ],
+  meeting: [
+    PLAY_MAIN_BGM_EVENT,
     PLAY_TRANSITION_SFX_EVENT,
     {
       type: 'transition_card',
@@ -148,8 +163,6 @@ export function createCampaignSequences(
       type: 'change_scene',
       sceneId: CAMPAIGN_CAFE_SCENE_ID,
     },
-  ],
-  meeting: [
     {
       type: 'dialogue',
       sequence: {
@@ -192,6 +205,11 @@ export function createCampaignSequences(
     {
       type: 'set_checkpoint',
       checkpointId: CAMPAIGN_AFTER_MEETING_CHECKPOINT_ID,
+    },
+    {
+      type: 'world_map',
+      action: 'complete_node',
+      nodeId: CAMPAIGN_ROUTE_MEETING_ID,
     },
   ],
   outing: [
@@ -274,6 +292,11 @@ export function createCampaignSequences(
       type: 'set_checkpoint',
       checkpointId: CAMPAIGN_AFTER_OUTING_CHECKPOINT_ID,
     },
+    {
+      type: 'world_map',
+      action: 'complete_node',
+      nodeId: CAMPAIGN_ROUTE_OUTING_ID,
+    },
   ],
   preparation: [
     PLAY_MAIN_BGM_EVENT,
@@ -350,6 +373,11 @@ export function createCampaignSequences(
       type: 'set_checkpoint',
       checkpointId: CAMPAIGN_AFTER_PREPARATION_CHECKPOINT_ID,
     },
+    {
+      type: 'world_map',
+      action: 'complete_node',
+      nodeId: CAMPAIGN_ROUTE_PREPARATION_ID,
+    },
   ],
   journey: [
     PLAY_MAIN_BGM_EVENT,
@@ -422,6 +450,11 @@ export function createCampaignSequences(
       type: 'set_checkpoint',
       checkpointId: CAMPAIGN_BEFORE_ENDING_CHECKPOINT_ID,
     },
+    {
+      type: 'world_map',
+      action: 'complete_node',
+      nodeId: CAMPAIGN_ROUTE_JOURNEY_ID,
+    },
   ],
   ending: [
     PLAY_ENDING_BGM_EVENT,
@@ -471,10 +504,6 @@ export function createCampaignSequences(
     },
     PLAY_ENDING_CHIME_EVENT,
     {
-      type: 'set_checkpoint',
-      checkpointId: CAMPAIGN_COMPLETE_CHECKPOINT_ID,
-    },
-    {
       type: 'speech',
       npcId: CAMPAIGN_COMPANION_NPC_ID,
       text: story.ending.completionSpeech,
@@ -484,49 +513,38 @@ export function createCampaignSequences(
       type: 'wait',
       durationSeconds: 2,
     },
+    {
+      type: 'set_checkpoint',
+      checkpointId: CAMPAIGN_COMPLETE_CHECKPOINT_ID,
+    },
+    {
+      type: 'world_map',
+      action: 'complete_node',
+      nodeId: CAMPAIGN_ROUTE_ENDING_ID,
+    },
   ],
   } satisfies Record<CampaignSegmentKey, readonly GameEvent[]>;
 
-  const main = createCampaignResumeSequence('campaign-main', 'prologue', campaignSegments);
-  const afterMeeting = createCampaignResumeSequence(
-    'campaign-resume-after-meeting',
-    'outing',
-    campaignSegments,
+  const main = createSegmentSequence('campaign-main', campaignSegments.prologue);
+  const routeEntries = {
+    meeting: createSegmentSequence('campaign-route-entry-1-1', campaignSegments.meeting),
+    outing: createSegmentSequence('campaign-route-entry-1-2', campaignSegments.outing),
+    preparation: createSegmentSequence('campaign-route-entry-1-3', campaignSegments.preparation),
+    journey: createSegmentSequence('campaign-route-entry-1-4', campaignSegments.journey),
+    ending: createSegmentSequence('campaign-route-entry-1-5', campaignSegments.ending),
+  } satisfies Readonly<Record<Exclude<CampaignSegmentKey, 'prologue'>, EventSequence>>;
+  const afterMeeting = createWorldMapResumeSequence('campaign-resume-after-meeting');
+  const afterOuting = createWorldMapResumeSequence('campaign-resume-after-outing');
+  const afterPreparation = createWorldMapResumeSequence('campaign-resume-after-preparation');
+  const beforeEnding = createWorldMapResumeSequence('campaign-resume-before-ending');
+  const complete = createWorldMapResumeSequence(
+    'campaign-complete-resume',
+    CAMPAIGN_ENDING_BGM_ID,
   );
-  const afterOuting = createCampaignResumeSequence(
-    'campaign-resume-after-outing',
-    'preparation',
-    campaignSegments,
-  );
-  const afterPreparation = createCampaignResumeSequence(
-    'campaign-resume-after-preparation',
-    'journey',
-    campaignSegments,
-  );
-  const beforeEnding = createCampaignResumeSequence(
-    'campaign-resume-before-ending',
-    'ending',
-    campaignSegments,
-  );
-  const complete = {
-    id: 'campaign-complete-resume',
-    events: [
-      PLAY_ENDING_BGM_EVENT,
-      {
-        type: 'speech',
-        npcId: CAMPAIGN_COMPANION_NPC_ID,
-        text: story.ending.resumeSpeech,
-        durationSeconds: 2.5,
-      },
-      {
-        type: 'wait',
-        durationSeconds: 2,
-      },
-    ],
-  } satisfies EventSequence;
 
   return {
     main,
+    routeEntries,
     afterMeeting,
     afterOuting,
     afterPreparation,
@@ -547,18 +565,18 @@ const CAMPAIGN_SEGMENT_ORDER = [
   'ending',
 ] as const satisfies readonly CampaignSegmentKey[];
 
-function createCampaignResumeSequence(
+function createSegmentSequence(id: string, events: readonly GameEvent[]): EventSequence {
+  return { id, events };
+}
+
+function createWorldMapResumeSequence(
   id: string,
-  startSegment: CampaignSegmentKey,
-  segments: Record<CampaignSegmentKey, readonly GameEvent[]>,
+  bgmId: string = CAMPAIGN_MAIN_BGM_ID,
 ): EventSequence {
-  const startIndex = CAMPAIGN_SEGMENT_ORDER.indexOf(startSegment);
-  const events: GameEvent[] = [];
-  for (const segment of CAMPAIGN_SEGMENT_ORDER.slice(startIndex)) {
-    events.push(...segments[segment]);
-  }
   return {
     id,
-    events,
+    events: [
+      { type: 'world_map', action: 'show', bgmId },
+    ],
   };
 }

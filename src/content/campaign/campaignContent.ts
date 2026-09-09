@@ -18,6 +18,8 @@ import { createCampaignPhoneStory } from './campaignPhoneStory';
 import { createCampaignScenes } from './campaignScenes';
 import { createCampaignSequences } from './campaignSequences';
 import { createCampaignTransitionCards } from './campaignTransitionCards';
+import { createCampaignWorldRoute } from './campaignWorldRoute';
+import type { WorldRouteDefinition } from '../../world/WorldRoute';
 
 export interface CampaignContentBundle {
   readonly scenes: readonly SceneDefinition[];
@@ -26,6 +28,7 @@ export interface CampaignContentBundle {
   readonly audioContent: AudioContentDefinition;
   readonly initialSceneId: string;
   readonly initialCheckpointId: string;
+  readonly worldRoute: WorldRouteDefinition;
 }
 
 // This factory injects story text into fixed public mechanics and IDs only.
@@ -66,5 +69,6 @@ export function createCampaignContent(
     audioContent: CAMPAIGN_AUDIO_CONTENT,
     initialSceneId: CAMPAIGN_BEDROOM_SCENE_ID,
     initialCheckpointId: CAMPAIGN_INITIAL_CHECKPOINT_ID,
+    worldRoute: createCampaignWorldRoute(sequences),
   };
 }

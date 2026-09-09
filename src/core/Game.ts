@@ -65,6 +65,11 @@ import { StartMenu } from '../ui/StartMenu';
 import { TaskHUD } from '../ui/TaskHUD';
 import { TransitionOverlay } from '../ui/TransitionOverlay';
 import { PhoneUI } from '../ui/phone/PhoneUI';
+import { WorldMapController } from '../world/WorldMapController';
+import type { WorldMapActions } from '../world/WorldMapActions';
+import { WorldProgress } from '../world/WorldProgress';
+import { WorldProgressStore } from '../world/WorldProgressStore';
+import { WorldRoute } from '../world/WorldRoute';
 
 function requireElement<T extends HTMLElement = HTMLElement>(id: string): T {
   const element = document.querySelector<T>(`#${id}`);
@@ -93,6 +98,7 @@ export class Game {
   private readonly progress: GameProgressController;
   private readonly speechBubble: SpeechBubble;
   private readonly followCamera: FollowCamera;
+  private readonly worldMap: WorldMapController;
   private readonly npcs = new Map<string, NPCController>();
   private readonly tasks = new Map<string, TaskEventBinding>();
   private animationFrameId: number | null = null;
@@ -195,15 +201,28 @@ export class Game {
       phoneContent,
       audioContent,
     );
+    const worldRoute = new WorldRoute(content.worldRoute);
+    for (const node of worldRoute.nodes) {
+      if (checkpointRegistry.getCheckpoint(node.completionCheckpointId) === undefined) {
+        throw new Error(
+          `World route node "${node.id}" references unknown Checkpoint "${node.completionCheckpointId}".`,
+        );
+      }
+    }
+    const worldProgress = new WorldProgress(worldRoute, new WorldProgressStore());
     let sceneManagerTarget: SceneManager | null = null;
     let progressTarget: GameProgressController | null = null;
     let phoneTarget: PhoneController | null = null;
+    let worldMapTarget: WorldMapController | null = null;
+    let followCameraTarget: FollowCamera | null = null;
     const sceneActions: SceneActions = {
       loadScene: (sceneId): void => {
         if (sceneManagerTarget === null) {
           throw new Error('SceneManager is not ready.');
         }
         sceneManagerTarget.loadScene(sceneId);
+        this.player.object.visible = true;
+        followCameraTarget?.snapToTarget();
       },
     };
     const checkpointActions: CheckpointActions = {
@@ -225,6 +244,20 @@ export class Game {
         phoneTarget?.cancelStoryPresentation();
       },
     };
+    const worldMapActions: WorldMapActions = {
+      showWorldMap: (): void => {
+        if (worldMapTarget === null) {
+          throw new Error('WorldMapController is not ready.');
+        }
+        worldMapTarget.showWorldMap();
+      },
+      completeNodeAndShow: (nodeId): void => {
+        if (worldMapTarget === null) {
+          throw new Error('WorldMapController is not ready.');
+        }
+        worldMapTarget.completeNodeAndShow(nodeId);
+      },
+    };
     this.eventRunner = new EventRunner(
       {
         input: this.input,
@@ -243,6 +276,7 @@ export class Game {
         checkpoints: checkpointActions,
         transition,
         audio: this.audio,
+        worldMap: worldMapActions,
       },
       {
         successResultDurationSeconds: GAME_CONFIG.phase3.successResultDurationSeconds,
@@ -301,25 +335,6 @@ export class Game {
     });
     phoneTarget = this.phone;
 
-    this.progress = new GameProgressController({
-      initialCheckpointId: content.initialCheckpointId,
-      checkpoints: checkpointRegistry,
-      saveStore: new GameSaveStore(),
-      sceneManager: this.sceneManager,
-      eventRunner: this.eventRunner,
-      phoneProgress,
-      phone: this.phone,
-      player: this.player,
-      interaction: this.interaction,
-      npcs: this.npcs,
-      menu: new StartMenu(requireElement('start-menu')),
-      focusTarget: this.renderer.domElement,
-    });
-    progressTarget = this.progress;
-
-    // Story sequences remain idle until the player explicitly chooses New Game or Continue.
-    this.progress.boot();
-
     this.followCamera = new FollowCamera(this.camera, this.player.object, {
       offset: new Vector3(
         GAME_CONFIG.camera.offset.x,
@@ -338,6 +353,79 @@ export class Game {
       maxLookAhead: GAME_CONFIG.camera.maxLookAhead,
       teleportSnapDistance: GAME_CONFIG.camera.teleportSnapDistance,
     });
+    followCameraTarget = this.followCamera;
+
+    this.worldMap = new WorldMapController(
+      {
+        input: this.input,
+        route: worldRoute,
+        progress: worldProgress,
+        camera: this.camera,
+        worldRoot: this.scene,
+        promptElement: requireElement('interaction-prompt'),
+        hudElement: requireElement('world-map-hud'),
+        hudStatusElement: requireElement('world-map-status'),
+        stageControlsElement: requireElement('stage-controls'),
+        mapControlsElement: requireElement('world-map-controls'),
+        onActivate: () => {
+          this.phone.close();
+          this.sceneManager.unloadScene();
+          this.player.object.visible = false;
+          this.player.setMovementEnabled(false);
+          this.interaction.setEnabled(false);
+          this.speechBubble.hide();
+        },
+        onDeactivate: () => {
+          this.player.object.visible = true;
+        },
+        startEntrySequence: (sequence) => this.eventRunner.start(sequence),
+      },
+      {
+        interactionRadius: GAME_CONFIG.worldMap.interactionRadius,
+        vehicle: GAME_CONFIG.worldMap.vehicle,
+        camera: {
+          offset: new Vector3(
+            GAME_CONFIG.worldMap.camera.offset.x,
+            GAME_CONFIG.worldMap.camera.offset.y,
+            GAME_CONFIG.worldMap.camera.offset.z,
+          ),
+          lookAtOffset: new Vector3(
+            GAME_CONFIG.worldMap.camera.lookAtOffset.x,
+            GAME_CONFIG.worldMap.camera.lookAtOffset.y,
+            GAME_CONFIG.worldMap.camera.lookAtOffset.z,
+          ),
+          positionSharpness: GAME_CONFIG.worldMap.camera.positionSharpness,
+          lookAtSharpness: GAME_CONFIG.worldMap.camera.lookAtSharpness,
+          velocitySharpness: GAME_CONFIG.worldMap.camera.velocitySharpness,
+          lookAheadSeconds: GAME_CONFIG.worldMap.camera.lookAheadSeconds,
+          maxLookAhead: GAME_CONFIG.worldMap.camera.maxLookAhead,
+          teleportSnapDistance: GAME_CONFIG.worldMap.camera.teleportSnapDistance,
+        },
+      },
+    );
+    worldMapTarget = this.worldMap;
+    this.followCamera.snapToTarget();
+
+    this.progress = new GameProgressController({
+      initialCheckpointId: content.initialCheckpointId,
+      checkpoints: checkpointRegistry,
+      saveStore: new GameSaveStore(),
+      sceneManager: this.sceneManager,
+      eventRunner: this.eventRunner,
+      phoneProgress,
+      phone: this.phone,
+      player: this.player,
+      interaction: this.interaction,
+      npcs: this.npcs,
+      menu: new StartMenu(requireElement('start-menu')),
+      focusTarget: this.renderer.domElement,
+      worldMap: this.worldMap,
+      worldProgress,
+    });
+    progressTarget = this.progress;
+
+    // Story sequences remain idle until the player explicitly chooses New Game or Continue.
+    this.progress.boot();
 
     this.addLights();
     this.resize();
@@ -376,6 +464,7 @@ export class Game {
     this.audio.dispose();
     this.audioMediaFactory.dispose();
     this.phone.dispose();
+    this.worldMap.dispose();
     this.sceneManager.dispose();
     this.itemThrow.dispose();
     this.interaction.dispose();
@@ -409,19 +498,28 @@ export class Game {
 
     // Controllers submit movement before the physics step; visuals only read the resolved pose afterward.
     this.input.update();
-    this.phone.update();
-    this.itemThrow.update(deltaSeconds);
-    for (const npc of this.npcs.values()) {
-      npc.update(deltaSeconds);
+    if (this.worldMap.isActive) {
+      this.worldMap.update(deltaSeconds);
+    } else if (this.sceneManager.currentSceneId !== null) {
+      this.phone.update();
+      this.itemThrow.update(deltaSeconds);
+      for (const npc of this.npcs.values()) {
+        npc.update(deltaSeconds);
+      }
+      this.player.updateBeforePhysics(deltaSeconds);
+      this.physics.step(deltaSeconds);
+      this.player.setCarrying(this.carry.hasItem);
+      this.player.updateAfterPhysics(deltaSeconds);
+      this.interaction.update(deltaSeconds);
     }
-    this.player.updateBeforePhysics(deltaSeconds);
-    this.physics.step(deltaSeconds);
-    this.player.setCarrying(this.carry.hasItem);
-    this.player.updateAfterPhysics(deltaSeconds);
-    this.interaction.update(deltaSeconds);
     this.eventRunner.update(deltaSeconds);
+    this.worldMap.commitPendingTransition();
     this.audio.update(deltaSeconds);
-    this.followCamera.update(deltaSeconds);
+    if (this.worldMap.isActive) {
+      this.worldMap.updateCamera(deltaSeconds);
+    } else {
+      this.followCamera.update(deltaSeconds);
+    }
     this.speechBubble.update(this.camera, deltaSeconds);
     this.renderer.render(this.scene, this.camera);
 
