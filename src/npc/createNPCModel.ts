@@ -20,6 +20,7 @@ const COMPANION_STYLE: CharacterVisualStyle = {
 
 export interface NPCModel {
   readonly root: Group;
+  readonly catchAnchor: Group;
   readonly highlight: Mesh;
   readonly speechAnchor: Group;
   readonly animator: CharacterAnimator;
@@ -45,6 +46,7 @@ export function createNPCModel(): NPCModel {
 
   return {
     root: character.root,
+    catchAnchor: character.carryAnchor,
     highlight,
     speechAnchor: character.speechAnchor,
     animator: character.animator,

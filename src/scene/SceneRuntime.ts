@@ -10,7 +10,9 @@ import type { Interactable } from '../interaction/Interactable';
 import type { InteractionSystem } from '../interaction/InteractionSystem';
 import type { ItemThrowSystem } from '../interaction/ItemThrowSystem';
 import { ProcessingStation } from '../interaction/ProcessingStation';
-import { NPCController } from '../npc/NPCController';
+import type { ThrowReceiver } from '../interaction/ThrowReceiver';
+import { WorkMotionSystem, type WorkMotionOptions } from '../interaction/WorkMotionSystem';
+import { NPCController, type NpcThrowCatchOptions } from '../npc/NPCController';
 import type { PhysicsWorld } from '../physics/PhysicsWorld';
 import type { PlayerController } from '../player/PlayerController';
 import { Stage } from '../stage/Stage';
@@ -37,6 +39,8 @@ export interface SceneRuntimeDependencies {
   readonly resultOverlay: ResultOverlay;
   readonly speechBubble: SpeechBubble;
   readonly createNpcInteractionHandler: NpcInteractionHandlerFactory;
+  readonly npcThrowCatch: NpcThrowCatchOptions;
+  readonly workMotion: WorkMotionOptions;
 }
 
 export class SceneRuntime {
@@ -44,7 +48,9 @@ export class SceneRuntime {
   public readonly stage: Stage;
   public readonly npcs: readonly NPCController[];
   public readonly interactables: readonly Interactable[];
+  public readonly throwReceivers: readonly ThrowReceiver[];
   public readonly taskBindings: readonly TaskEventBinding[];
+  private readonly workMotionSystem: WorkMotionSystem;
   private disposed = false;
 
   private constructor(
@@ -53,13 +59,25 @@ export class SceneRuntime {
     stage: Stage,
     npcs: readonly NPCController[],
     interactables: readonly Interactable[],
+    processingStations: readonly ProcessingStation[],
+    assemblyStations: readonly AssemblyStation[],
+    throwReceivers: readonly ThrowReceiver[],
     taskBindings: readonly TaskEventBinding[],
+    player: PlayerController,
+    workMotion: WorkMotionOptions,
   ) {
     this.root = root;
     this.stage = stage;
     this.npcs = npcs;
     this.interactables = interactables;
+    this.throwReceivers = throwReceivers;
     this.taskBindings = taskBindings;
+    this.workMotionSystem = new WorkMotionSystem(
+      player,
+      processingStations,
+      assemblyStations,
+      workMotion,
+    );
   }
 
   public static create(
@@ -73,7 +91,12 @@ export class SceneRuntime {
     const interactables: Interactable[] = [];
 
     try {
-      stage = new Stage(root, dependencies.physics, definition.stage);
+      stage = new Stage(
+        root,
+        dependencies.physics,
+        definition.stage,
+        dependencies.itemThrow.landingSpacing,
+      );
       const activeStage = stage;
       for (const npcDefinition of definition.npcs) {
         const npc = new NPCController({
@@ -82,6 +105,7 @@ export class SceneRuntime {
           position: npcDefinition.position,
           moveSpeed: npcDefinition.moveSpeed,
           turnSharpness: npcDefinition.turnSharpness,
+          throwCatch: dependencies.npcThrowCatch,
         });
         npc.setInteractionHandler(
           dependencies.createNpcInteractionHandler(definition.id, npcDefinition.id),
@@ -140,6 +164,13 @@ export class SceneRuntime {
         })
       );
 
+      const resetFeelPresentation = (): void => {
+        dependencies.player.setWorkMode('none');
+        for (const npc of npcs) {
+          npc.resetPresentation();
+        }
+      };
+
       const taskBindings: TaskEventBinding[] = definition.placementTasks.map((taskDefinition) => {
         const task = new PlacementTask(new CountdownTimer(), {
           id: taskDefinition.id,
@@ -163,6 +194,7 @@ export class SceneRuntime {
           preserveWorldOnFirstAttempt: taskDefinition.preserveWorldOnFirstAttempt,
           preserveItemProcessingOnRetry: taskDefinition.preserveItemProcessingOnRetry,
           preserveItemRuntimeOnRetry: taskDefinition.preserveItemRuntimeOnRetry,
+          resetFeelPresentation,
           worldRoot: activeStage.object,
           resetBeforeItems: () => {
             for (const station of processingStations) {
@@ -214,6 +246,7 @@ export class SceneRuntime {
           playerStartFacing: taskDefinition.attemptPlayerFacing,
           resultOverlay: dependencies.resultOverlay,
           speechBubble: dependencies.speechBubble,
+          resetFeelPresentation,
         }));
       }
 
@@ -238,10 +271,30 @@ export class SceneRuntime {
           playerStartFacing: taskDefinition.attemptPlayerFacing,
           resultOverlay: dependencies.resultOverlay,
           speechBubble: dependencies.speechBubble,
+          resetFeelPresentation,
         }));
       }
 
-      return new SceneRuntime(definition, root, stage, npcs, interactables, taskBindings);
+      const throwReceivers: ThrowReceiver[] = [
+        ...activeStage.placePoints,
+        ...processingStations,
+        ...assemblyStations,
+        ...npcs,
+        ...activeStage.tableThrowSurfaces,
+      ];
+      return new SceneRuntime(
+        definition,
+        root,
+        stage,
+        npcs,
+        interactables,
+        processingStations,
+        assemblyStations,
+        throwReceivers,
+        taskBindings,
+        dependencies.player,
+        dependencies.workMotion,
+      );
     } catch (error: unknown) {
       for (const npc of npcs) {
         npc.dispose();
@@ -253,11 +306,20 @@ export class SceneRuntime {
     }
   }
 
+  public updatePresentation(deltaSeconds: number): void {
+    if (this.disposed) {
+      return;
+    }
+    this.workMotionSystem.update(deltaSeconds);
+  }
+
   public dispose(): void {
     if (this.disposed) {
       return;
     }
     this.disposed = true;
+
+    this.workMotionSystem.reset();
 
     for (const npc of this.npcs) {
       npc.dispose();

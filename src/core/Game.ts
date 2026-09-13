@@ -40,6 +40,7 @@ import { KeyboardInput } from '../input/KeyboardInput';
 import { CarrySystem } from '../interaction/CarrySystem';
 import { InteractionSystem } from '../interaction/InteractionSystem';
 import { ItemThrowSystem } from '../interaction/ItemThrowSystem';
+import { DashBumpSystem } from '../interaction/DashBumpSystem';
 import { NPCController } from '../npc/NPCController';
 import { PhysicsWorld } from '../physics/PhysicsWorld';
 import { PhoneContentRegistry } from '../phone/PhoneContentRegistry';
@@ -89,6 +90,7 @@ export class Game {
   private readonly carry: CarrySystem;
   private readonly interaction: InteractionSystem;
   private readonly itemThrow: ItemThrowSystem;
+  private readonly dashBump: DashBumpSystem;
   private readonly eventRunner: EventRunner;
   private readonly audio: AudioManager;
   private readonly audioMediaFactory: BrowserAudioMediaFactory;
@@ -159,8 +161,15 @@ export class Game {
       {
         ...GAME_CONFIG.itemThrow,
         landingSpacing: GAME_CONFIG.interaction.floorItemSpacing,
+        assist: {
+          endpointRadius: GAME_CONFIG.throwAssist.endpointRadius,
+          blendStartProgress: GAME_CONFIG.throwAssist.blendStartProgress,
+          minimumForwardDot: GAME_CONFIG.throwAssist.minimumForwardDot,
+          maximumLateralOffset: GAME_CONFIG.throwAssist.maximumLateralOffset,
+        },
       },
     );
+    this.dashBump = new DashBumpSystem(this.player, this.npcs, GAME_CONFIG.dashBump);
     const carry = this.carry;
     this.interaction = new InteractionSystem(
       this.input,
@@ -277,6 +286,14 @@ export class Game {
         transition,
         audio: this.audio,
         worldMap: worldMapActions,
+        resetTransientInteractionFeel: () => {
+          this.itemThrow.cancelAll();
+          this.dashBump.reset();
+          this.player.setWorkMode('none');
+          for (const npc of this.npcs.values()) {
+            npc.resetPresentation();
+          }
+        },
       },
       {
         successResultDurationSeconds: GAME_CONFIG.phase3.successResultDurationSeconds,
@@ -303,6 +320,8 @@ export class Game {
         itemThrow: this.itemThrow,
         resultOverlay,
         speechBubble: this.speechBubble,
+        npcThrowCatch: GAME_CONFIG.throwAssist.npc,
+        workMotion: GAME_CONFIG.workMotion,
         createNpcInteractionHandler: (sceneId, npcId) => {
           if (npcId !== PHASE5_HELPER_NPC_ID) {
             return null;
@@ -467,6 +486,7 @@ export class Game {
     this.worldMap.dispose();
     this.sceneManager.dispose();
     this.itemThrow.dispose();
+    this.dashBump.reset();
     this.interaction.dispose();
     this.input.dispose();
     this.player.dispose();
@@ -510,10 +530,12 @@ export class Game {
       this.physics.step(deltaSeconds);
       this.player.setCarrying(this.carry.hasItem);
       this.player.updateAfterPhysics(deltaSeconds);
+      this.dashBump.updateAfterPlayerResolution();
       this.interaction.update(deltaSeconds);
     }
     this.eventRunner.update(deltaSeconds);
     this.worldMap.commitPendingTransition();
+    this.sceneManager.updatePresentation(deltaSeconds);
     this.audio.update(deltaSeconds);
     if (this.worldMap.isActive) {
       this.worldMap.updateCamera(deltaSeconds);

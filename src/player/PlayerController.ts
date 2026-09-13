@@ -2,7 +2,7 @@ import { Group, Vector3, type Vector3Like } from 'three';
 import { InputAction } from '../input/InputAction';
 import type { InputManager } from '../input/InputManager';
 import type { KinematicCharacter } from '../physics/KinematicCharacter';
-import type { CharacterAnimator } from '../visual/CharacterAnimator';
+import type { CharacterAnimator, CharacterWorkMode } from '../visual/CharacterAnimator';
 import { DashState, type DashStateOptions } from './DashState';
 import { createPlayerModel } from './createPlayerModel';
 import { stepPlanarVelocity } from './MovementSmoothing';
@@ -21,6 +21,14 @@ interface PlayerControllerOptions {
 
 const MOVEMENT_EPSILON_SQUARED = 0.0001;
 
+export interface DashFrameMotion {
+  readonly active: boolean;
+  readonly sequenceId: number;
+  readonly direction: Readonly<{ x: number; z: number }>;
+  readonly start: Readonly<{ x: number; z: number }>;
+  readonly end: Readonly<{ x: number; z: number }>;
+}
+
 export class PlayerController {
   public readonly object: Group;
   public readonly carryAnchor: Group;
@@ -32,6 +40,10 @@ export class PlayerController {
   private targetFacing = 0;
   private carrying = false;
   private movementEnabled = true;
+  private actualSpeed = 0;
+  private dashSequenceId = 0;
+  private readonly dashFrameDirection = { x: 0, z: 1 };
+  private dashActiveThisFrame = false;
 
   public constructor(
     private readonly input: InputManager,
@@ -56,6 +68,7 @@ export class PlayerController {
         this.options.dash.inputDirectionThreshold,
       );
       if (this.dash.tryStart(direction)) {
+        this.dashSequenceId += 1;
         this.targetFacing = Math.atan2(direction.x, direction.z);
         this.animator.triggerDash();
       }
@@ -70,6 +83,9 @@ export class PlayerController {
       deltaSeconds,
     );
     const dashStep = this.dash.advance(deltaSeconds);
+    this.dashActiveThisFrame = dashStep.activeSeconds > 0;
+    this.dashFrameDirection.x = dashStep.direction.x;
+    this.dashFrameDirection.z = dashStep.direction.z;
     this.desiredDisplacement.x = (
       this.movementVelocity.x * dashStep.normalSeconds
       + dashStep.direction.x * dashStep.speed * dashStep.activeSeconds
@@ -103,10 +119,29 @@ export class PlayerController {
     return this.dash.isActive;
   }
 
+  public get dashFrameMotion(): DashFrameMotion {
+    return {
+      active: this.dashActiveThisFrame,
+      sequenceId: this.dashSequenceId,
+      direction: this.dashFrameDirection,
+      start: this.previousResolvedPosition,
+      end: this.object.position,
+    };
+  }
+
+  public get currentSpeed(): number {
+    return this.actualSpeed;
+  }
+
+  public get isCarrying(): boolean {
+    return this.carrying;
+  }
+
   public setMovementEnabled(enabled: boolean): void {
     this.movementEnabled = enabled;
     if (!enabled) {
       this.dash.cancelActive();
+      this.dashActiveThisFrame = false;
       this.movementVelocity.x = 0;
       this.movementVelocity.z = 0;
     }
@@ -124,6 +159,15 @@ export class PlayerController {
     this.animator.triggerThrow();
   }
 
+  public cancelDashForBump(): void {
+    this.dash.cancelActive();
+    this.animator.triggerImpact();
+  }
+
+  public setWorkMode(mode: CharacterWorkMode): void {
+    this.animator.setWorkMode(mode);
+  }
+
   public reset(position: Readonly<Vector3Like>, facingRadians: number): void {
     this.character.resetPosition(position);
     this.object.position.copy(position);
@@ -132,7 +176,12 @@ export class PlayerController {
     this.movementVelocity.x = 0;
     this.movementVelocity.z = 0;
     this.dash.reset();
+    this.dashActiveThisFrame = false;
+    this.dashSequenceId = 0;
+    this.dashFrameDirection.x = 0;
+    this.dashFrameDirection.z = 1;
     this.carrying = false;
+    this.actualSpeed = 0;
     this.previousResolvedPosition.copy(position);
     this.animator.reset();
   }
@@ -151,8 +200,9 @@ export class PlayerController {
       this.object.position.z - this.previousResolvedPosition.z,
     );
     const actualSpeed = deltaSeconds > 0 ? resolvedDistance / deltaSeconds : 0;
+    this.actualSpeed = Number.isFinite(actualSpeed) ? actualSpeed : 0;
     this.animator.update(deltaSeconds, {
-      actualSpeed,
+      actualSpeed: this.actualSpeed,
       maximumSpeed: this.options.speed,
       carrying: this.carrying,
     });

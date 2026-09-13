@@ -84,6 +84,7 @@ export class SceneManager implements SceneActions {
           allItems,
           this.dependencies.floorItemSpacing,
         ),
+        installedRuntime.throwReceivers,
       );
 
       for (const item of installedRuntime.stage.pickableItems) {
@@ -139,6 +140,10 @@ export class SceneManager implements SceneActions {
       return;
     }
     this.detachCurrentScene();
+  }
+
+  public updatePresentation(deltaSeconds: number): void {
+    this.currentRuntime?.updatePresentation(deltaSeconds);
   }
 
   private detachCurrentScene(): void {

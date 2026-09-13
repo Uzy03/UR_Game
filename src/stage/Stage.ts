@@ -9,6 +9,7 @@ import {
 import { disposeObject3D } from '../core/disposeObject3D';
 import { PickableItem } from '../interaction/PickableItem';
 import { PlacePoint } from '../interaction/PlacePoint';
+import { TableThrowSurface } from '../interaction/TableThrowSurface';
 import type { PhysicsBodyHandle, PhysicsWorld } from '../physics/PhysicsWorld';
 import type {
   StageDefinition,
@@ -36,6 +37,7 @@ export class Stage {
   public readonly object = new Group();
   public readonly pickableItems: readonly PickableItem[];
   public readonly placePoints: readonly PlacePoint[];
+  public readonly tableThrowSurfaces: readonly TableThrowSurface[];
   private readonly physicsHandles: PhysicsBodyHandle[] = [];
   private disposed = false;
 
@@ -43,6 +45,7 @@ export class Stage {
     parent: Object3D,
     physics: PhysicsWorld,
     private readonly options: StageDefinition,
+    throwSurfaceLandingSpacing = 0,
   ) {
     this.object.name = 'Stage';
     parent.add(this.object);
@@ -72,9 +75,21 @@ export class Stage {
         position: placePoint.position,
         parent: this.object,
       }));
+      this.tableThrowSurfaces = options.obstacles.flatMap((obstacle, index) => (
+        obstacle.kind === 'table'
+          ? [new TableThrowSurface(
+            `table-surface:${index}`,
+            obstacle,
+            this.pickableItems,
+            throwSurfaceLandingSpacing,
+            Number.POSITIVE_INFINITY,
+          )]
+          : []
+      ));
     } catch (error: unknown) {
       this.pickableItems = [];
       this.placePoints = [];
+      this.tableThrowSurfaces = [];
       this.dispose();
       throw error;
     }

@@ -47,6 +47,7 @@ interface EventRunnerDependencies {
   readonly transition: TransitionActions;
   readonly audio: AudioActions;
   readonly worldMap: WorldMapActions;
+  readonly resetTransientInteractionFeel?: () => void;
 }
 
 interface EventRunnerOptions {
@@ -209,6 +210,7 @@ export class EventRunner {
     if (this.runnerState === 'running') {
       this.cleanupRuntime();
     } else {
+      this.dependencies.resetTransientInteractionFeel?.();
       this.clearUiAndTaskState();
       this.restoreControlsAndNpcInteractions();
     }
@@ -232,6 +234,7 @@ export class EventRunner {
     if (this.runnerState === 'running') {
       this.cleanupRuntime();
     } else {
+      this.dependencies.resetTransientInteractionFeel?.();
       this.clearUiAndTaskState();
       this.restoreControlsAndNpcInteractions();
     }
@@ -561,6 +564,7 @@ export class EventRunner {
   }
 
   private cleanupRuntime(): void {
+    this.dependencies.resetTransientInteractionFeel?.();
     this.dependencies.dialogue.close();
     this.activeNpc?.stop();
     this.clearUiAndTaskState();

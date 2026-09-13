@@ -9,6 +9,13 @@ import {
 import type { Interactable, InteractionContext } from './Interactable';
 import type { PickableItem } from './PickableItem';
 import { InteractionHighlight } from '../visual/InteractionHighlight';
+import {
+  THROW_RECEIVER_PRIORITY,
+  type ThrowAssistContext,
+  type ThrowReceiver,
+  type ThrowReceiverCandidate,
+  type ThrowReceiverReservation,
+} from './ThrowReceiver';
 
 interface PlacePointOptions {
   readonly id: string;
@@ -16,11 +23,12 @@ interface PlacePointOptions {
   readonly parent: Group;
 }
 
-export class PlacePoint implements Interactable {
+export class PlacePoint implements Interactable, ThrowReceiver {
   public readonly id: string;
   public readonly object = new Group();
   private readonly highlight: InteractionHighlight;
   private placedItem: PickableItem | null = null;
+  private reservedItem: PickableItem | null = null;
 
   public constructor(options: PlacePointOptions) {
     this.id = options.id;
@@ -53,7 +61,9 @@ export class PlacePoint implements Interactable {
   }
 
   public canInteract(context: InteractionContext): boolean {
-    return context.carry.hasItem ? !this.isOccupied : this.isOccupied;
+    return context.carry.hasItem
+      ? !this.isOccupied && this.reservedItem === null
+      : this.isOccupied;
   }
 
   public getInteractionLabel(context: InteractionContext): string {
@@ -61,7 +71,11 @@ export class PlacePoint implements Interactable {
   }
 
   public interact(context: InteractionContext): boolean {
-    if (context.carry.hasItem && this.placedItem === null) {
+    if (
+      context.carry.hasItem
+      && this.placedItem === null
+      && this.reservedItem === null
+    ) {
       const item = context.carry.releaseForPlacement();
       if (item === null) {
         return false;
@@ -95,8 +109,54 @@ export class PlacePoint implements Interactable {
     this.highlight.update(deltaSeconds);
   }
 
+  public getThrowReceiverCandidate(
+    item: PickableItem,
+    context: ThrowAssistContext,
+  ): ThrowReceiverCandidate | null {
+    if (this.placedItem !== null || this.reservedItem !== null || !item.isActive) {
+      return null;
+    }
+    const targetPosition = this.object.getWorldPosition(new Vector3());
+    context.worldRoot.worldToLocal(targetPosition);
+    return {
+      id: `place-point:${this.id}`,
+      priority: THROW_RECEIVER_PRIORITY.placePoint,
+      assistRadius: Number.POSITIVE_INFINITY,
+      targetPosition,
+      reserve: () => this.reserveThrow(item, targetPosition),
+    };
+  }
+
   public reset(): void {
     this.placedItem = null;
+    this.reservedItem = null;
     this.setHighlighted(false);
+  }
+
+  private reserveThrow(
+    item: PickableItem,
+    targetPosition: Readonly<Vector3>,
+  ): ThrowReceiverReservation | null {
+    if (this.placedItem !== null || this.reservedItem !== null) {
+      return null;
+    }
+    this.reservedItem = item;
+    let active = true;
+    const release = (): void => {
+      if (active && this.reservedItem === item) {
+        this.reservedItem = null;
+      }
+      active = false;
+    };
+    return {
+      targetPosition: targetPosition.clone(),
+      complete: (landedItem) => {
+        release();
+        this.placedItem = landedItem;
+        landedItem.placeAt(this.object);
+        return null;
+      },
+      cancel: release,
+    };
   }
 }
