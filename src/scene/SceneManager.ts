@@ -134,6 +134,13 @@ export class SceneManager implements SceneActions {
     this.detachCurrentScene();
   }
 
+  public unloadScene(): void {
+    if (this.disposed) {
+      return;
+    }
+    this.detachCurrentScene();
+  }
+
   private detachCurrentScene(): void {
     this.dependencies.interaction.clearInteractables();
     this.dependencies.itemThrow.unbindScene();

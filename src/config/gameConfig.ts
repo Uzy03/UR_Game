@@ -77,6 +77,26 @@ export const GAME_CONFIG = {
     maxLookAhead: 0.48,
     teleportSnapDistance: 5,
   },
+  worldMap: {
+    vehicle: {
+      speed: 5.2,
+      acceleration: 15,
+      deceleration: 22,
+      turnSharpness: 12,
+      bounds: { minX: -8.1, maxX: 8.1, minZ: -4.8, maxZ: 4.8 },
+    },
+    interactionRadius: 1.55,
+    camera: {
+      offset: { x: 8.8, y: 17.8, z: 11.8 },
+      lookAtOffset: { x: 0, y: 0.25, z: 0 },
+      positionSharpness: 6.5,
+      lookAtSharpness: 8,
+      velocitySharpness: 7,
+      lookAheadSeconds: 0.1,
+      maxLookAhead: 0.4,
+      teleportSnapDistance: 4,
+    },
+  },
   lighting: {
     hemisphereSkyColor: 0xfff3dc,
     hemisphereGroundColor: 0x697064,

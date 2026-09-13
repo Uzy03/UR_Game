@@ -301,6 +301,41 @@ body,
   backdrop-filter: blur(6px);
 }
 
+.controls[hidden] {
+  display: none;
+}
+
+.world-map-hud {
+  position: fixed;
+  top: 18px;
+  left: 50%;
+  display: grid;
+  min-width: 280px;
+  gap: 3px;
+  padding: 10px 18px;
+  transform: translateX(-50%);
+  border: 1px solid rgb(255 255 255 / 70%);
+  border-radius: 14px;
+  background: rgb(78 57 49 / 87%);
+  box-shadow: 0 8px 28px rgb(75 45 35 / 22%);
+  color: white;
+  font-size: 13px;
+  text-align: center;
+  pointer-events: none;
+  backdrop-filter: blur(8px);
+}
+
+.world-map-hud strong {
+  color: #f1cf7f;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.world-map-hud[hidden] {
+  display: none;
+}
+
 .interaction-prompt {
   position: fixed;
   left: 50%;

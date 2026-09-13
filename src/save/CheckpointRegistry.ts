@@ -140,6 +140,13 @@ export class CheckpointRegistry {
       case 'audio_cue':
         assertValidAudioCue(event.cue, this.audioContent, `${label} Audio Cue`);
         break;
+      case 'world_map':
+        if (event.action === 'complete_node') {
+          this.assertId(event.nodeId, `${label} World Map node`);
+        } else if (event.bgmId !== undefined) {
+          this.audioContent.requireClip(event.bgmId, 'bgm');
+        }
+        break;
       default: {
         const unsupported = event as { readonly type?: unknown };
         throw new Error(`${label} has unsupported type "${String(unsupported.type)}".`);

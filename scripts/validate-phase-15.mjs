@@ -140,9 +140,17 @@ try {
   );
   const publicSequences = createSequences(FICTIONAL_CAMPAIGN_STORY);
   const privateSequences = createSequences(privateStory);
-  assert.equal(publicSequences.main.events.length, 86);
-  assert.equal(privateSequences.main.events.length, 86);
-  const objectiveTexts = privateSequences.main.events
+  const publicCampaignEvents = [
+    ...publicSequences.main.events,
+    ...Object.values(publicSequences.routeEntries).flatMap(({ events }) => events),
+  ];
+  const privateCampaignEvents = [
+    ...privateSequences.main.events,
+    ...Object.values(privateSequences.routeEntries).flatMap(({ events }) => events),
+  ];
+  assert.equal(publicCampaignEvents.length, 93);
+  assert.equal(privateCampaignEvents.length, 93);
+  const objectiveTexts = privateCampaignEvents
     .filter((event) => event.type === 'set_objective' && event.objective !== null)
     .map((event) => event.objective.text);
   assert.deepEqual(objectiveTexts, [

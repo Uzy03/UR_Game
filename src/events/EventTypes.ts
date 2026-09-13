@@ -84,6 +84,20 @@ export interface AudioCueEvent {
   readonly cue: AudioCue;
 }
 
+export interface ShowWorldMapEvent {
+  readonly type: 'world_map';
+  readonly action: 'show';
+  readonly bgmId?: string;
+}
+
+export interface CompleteWorldNodeEvent {
+  readonly type: 'world_map';
+  readonly action: 'complete_node';
+  readonly nodeId: string;
+}
+
+export type WorldMapEvent = ShowWorldMapEvent | CompleteWorldNodeEvent;
+
 export type GameEvent =
   | DialogueEvent
   | MoveNpcEvent
@@ -98,7 +112,8 @@ export type GameEvent =
   | SetCheckpointEvent
   | PhoneStoryEvent
   | TransitionCardEvent
-  | AudioCueEvent;
+  | AudioCueEvent
+  | WorldMapEvent;
 
 export interface EventSequence {
   readonly id: string;

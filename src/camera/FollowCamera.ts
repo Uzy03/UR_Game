@@ -64,7 +64,7 @@ export class FollowCamera {
     this.camera.lookAt(this.currentLookAt);
   }
 
-  private snapToTarget(): void {
+  public snapToTarget(): void {
     this.target.getWorldPosition(this.targetPosition);
     this.previousTargetPosition.copy(this.targetPosition);
     this.smoothedVelocity.set(0, 0, 0);

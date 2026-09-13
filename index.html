@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#d8cfc3" />
-    <title>Anniversary Game — Phase 18</title>
+    <title>Anniversary Game — Phase 19</title>
   </head>
   <body>
     <main id="app" aria-label="3D game"></main>
@@ -17,7 +17,7 @@
     >Sound On</button>
     <section id="start-menu" class="start-menu">
       <div class="start-menu-panel" role="dialog" aria-modal="true" aria-labelledby="start-menu-title">
-        <p class="start-menu-phase">Phase 18 Dash &amp; Throw</p>
+        <p class="start-menu-phase">Phase 19 World Map</p>
         <h1 id="start-menu-title">Anniversary Game</h1>
         <p class="start-menu-description">Play a campaign that connects every story and gameplay system.</p>
         <div class="start-menu-actions">
@@ -46,6 +46,10 @@
       <div data-task-label></div>
       <div data-task-timer></div>
     </section>
+    <section id="world-map-hud" class="world-map-hud" aria-live="polite" hidden>
+      <strong>World Map</strong>
+      <span id="world-map-status"></span>
+    </section>
     <div id="interaction-prompt" class="interaction-prompt" role="status" hidden></div>
     <div id="speech-bubble" class="speech-bubble" role="status" hidden></div>
     <section id="dialogue-window" class="dialogue-window" aria-live="polite" hidden>
@@ -68,8 +72,11 @@
         <footer class="phone-home-indicator" aria-hidden="true"></footer>
       </div>
     </section>
-    <div class="controls" aria-hidden="true">
+    <div id="stage-controls" class="controls" aria-hidden="true">
       <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> Move&nbsp;&nbsp;<kbd>Space</kbd> Dash&nbsp;&nbsp;<kbd>E</kbd> Interact&nbsp;&nbsp;<kbd>Q</kbd> Throw&nbsp;&nbsp;<kbd>F</kbd> Phone&nbsp;&nbsp;<kbd>R</kbd> Retry&nbsp;&nbsp;<kbd>Esc</kbd> Back
+    </div>
+    <div id="world-map-controls" class="controls" aria-hidden="true" hidden>
+      <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> Drive&nbsp;&nbsp;<kbd>E</kbd> Enter stage
     </div>
     <noscript>このゲームを実行するにはJavaScriptを有効にしてください。</noscript>
     <script type="module" src="/src/main.ts"></script>

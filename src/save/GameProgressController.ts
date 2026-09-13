@@ -9,6 +9,8 @@ import type { StartMenu } from '../ui/StartMenu';
 import type { CheckpointActions, CheckpointDefinition } from './CheckpointTypes';
 import type { CheckpointRegistry } from './CheckpointRegistry';
 import type { GameSaveStore } from './GameSaveStore';
+import type { WorldMapController } from '../world/WorldMapController';
+import type { WorldProgress } from '../world/WorldProgress';
 
 interface GameProgressDependencies {
   readonly initialCheckpointId: string;
@@ -23,6 +25,8 @@ interface GameProgressDependencies {
   readonly npcs: ReadonlyMap<string, NPCController>;
   readonly menu: StartMenu;
   readonly focusTarget: HTMLElement;
+  readonly worldMap: WorldMapController;
+  readonly worldProgress: WorldProgress;
 }
 
 export class GameProgressController implements CheckpointActions {
@@ -58,6 +62,7 @@ export class GameProgressController implements CheckpointActions {
 
     this.dependencies.saveStore.clear();
     this.dependencies.phoneProgress.reset();
+    this.dependencies.worldProgress.reset();
     this.continueDisabledForSession = false;
     const checkpoint = this.dependencies.checkpoints.getCheckpoint(
       this.dependencies.initialCheckpointId,
@@ -107,6 +112,8 @@ export class GameProgressController implements CheckpointActions {
     this.cleanupAndLockWorld();
     this.dependencies.saveStore.clear();
     this.dependencies.phoneProgress.reset();
+    this.dependencies.worldProgress.reset();
+    this.ensureMenuScene();
     this.continueDisabledForSession = false;
     this.dependencies.menu.setBusy(false);
     this.showMenu('Progress reset. Choose New Game when you are ready.');
@@ -131,6 +138,7 @@ export class GameProgressController implements CheckpointActions {
       // A newly installed scene contains fresh NPCs, so the restore lock must be reapplied.
       this.setWorldEnabled(false);
       this.dependencies.phoneProgress.replace(checkpoint.phoneProgress);
+      this.dependencies.worldProgress.restoreForCheckpoint(checkpoint.id);
 
       this.gameActive = true;
       this.setWorldEnabled(true);
@@ -167,6 +175,7 @@ export class GameProgressController implements CheckpointActions {
   }
 
   private cleanupAndLockWorld(): void {
+    this.dependencies.worldMap.hide();
     this.dependencies.eventRunner.reset();
     this.dependencies.phone.close();
     this.dependencies.interaction.reset();
@@ -180,6 +189,22 @@ export class GameProgressController implements CheckpointActions {
     for (const npc of this.dependencies.npcs.values()) {
       npc.setInteractionEnabled(enabled);
     }
+  }
+
+  private ensureMenuScene(): void {
+    if (this.dependencies.sceneManager.currentSceneId !== null) {
+      return;
+    }
+    const initialCheckpoint = this.dependencies.checkpoints.getCheckpoint(
+      this.dependencies.initialCheckpointId,
+    );
+    if (initialCheckpoint === undefined) {
+      throw new Error(
+        `Initial Checkpoint "${this.dependencies.initialCheckpointId}" is not registered.`,
+      );
+    }
+    this.dependencies.sceneManager.loadScene(initialCheckpoint.sceneId);
+    this.setWorldEnabled(false);
   }
 
   private showMenu(message?: string): void {
