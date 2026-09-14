@@ -459,15 +459,19 @@ try {
     wallColor: 0xffffff,
     obstacles: [{
       kind: 'table',
-      position: { x: 3, y: 0.5, z: 0 },
-      size: { x: 1.5, y: 1, z: 1 },
+      position: { x: 3.5, y: 0.65, z: 0 },
+      size: { x: 3.5, y: 1.3, z: 1.7 },
       color: 0xffffff,
     }],
     items: [
-      { id: 'table-item', kind: 'tomato', position: { x: -3, y: 0, z: -3 } },
-      { id: 'table-reservation-item', kind: 'box', position: { x: -2, y: 0, z: -3 } },
+      { id: 'table-semantic-a', kind: 'drink', position: { x: -3, y: 0, z: -3 } },
+      { id: 'table-semantic-b', kind: 'drink', position: { x: -2, y: 0, z: -3 } },
+      { id: 'table-generic-item', kind: 'tomato', position: { x: -1, y: 0, z: -3 } },
     ],
-    placePoints: [],
+    placePoints: [
+      { id: 'table-place-a', position: { x: 3.05, y: 1.315, z: 0 } },
+      { id: 'table-place-b', position: { x: 3.95, y: 1.315, z: 0 } },
+    ],
   }, GAME_CONFIG.interaction.floorItemSpacing);
   const tablePlayer = new Group();
   const tableAnchor = new Group();
@@ -493,8 +497,11 @@ try {
     tableStage.object,
     tableStage.pickableItems,
     tableValidator,
-    tableStage.tableThrowSurfaces,
+    [...tableStage.placePoints, ...tableStage.tableThrowSurfaces],
   );
+  // The ordinary floor endpoint stops in front of the obstacle, outside the global
+  // endpoint radius of both canonical PlacePoints. Table geometry still routes the
+  // clear table aim to distinct semantic anchors.
   assert.equal(tableCarry.pickUp(tableStage.pickableItems[0]), true);
   tableInput.movement = { x: 1, y: 0 };
   tableInput.press(InputAction.Throw);
@@ -503,13 +510,30 @@ try {
   tableInput.press(InputAction.Throw);
   tableThrow.update(0);
   while (tableThrow.activeThrowCount > 0) tableThrow.update(1 / 60);
-  const tableItem = tableStage.pickableItems[0];
-  assert.equal(tableItem.isOnFloor(), true);
-  approximatelyEqual(tableItem.object.position.y, 1);
-  assert.ok(tableItem.object.position.x >= 2.54 && tableItem.object.position.x <= 3.46);
-  assert.equal(tableStage.pickableItems[1].isOnFloor(), true);
-  approximatelyEqual(tableStage.pickableItems[1].object.position.y, 0);
-  assert.equal(tableCarry.pickUp(tableItem), true);
+  assert.equal(tableStage.placePoints[0].currentItem, tableStage.pickableItems[0]);
+  assert.equal(tableStage.placePoints[1].currentItem, tableStage.pickableItems[1]);
+  const tablePlacementTask = new PlacementTask(new CountdownTimer(), {
+    id: 'table-throw-placement-task',
+    label: 'Table throw placement task',
+    requiredItemIds: ['table-semantic-a', 'table-semantic-b'],
+    targetPlacePoints: tableStage.placePoints,
+    durationSeconds: 10,
+  });
+  tablePlacementTask.start();
+  tablePlacementTask.update(0);
+  assert.equal(tablePlacementTask.state, 'succeeded');
+
+  // With both contained semantic points occupied, the same table still provides
+  // an ordinary pickup-able tabletop landing when a free surface position exists.
+  assert.equal(tableCarry.pickUp(tableStage.pickableItems[2]), true);
+  tableInput.press(InputAction.Throw);
+  tableThrow.update(0);
+  while (tableThrow.activeThrowCount > 0) tableThrow.update(1 / 60);
+  const genericTableItem = tableStage.pickableItems[2];
+  assert.equal(genericTableItem.isOnFloor(), true);
+  approximatelyEqual(genericTableItem.object.position.y, 1.3);
+  assert.ok(genericTableItem.object.position.x >= 2.04 && genericTableItem.object.position.x <= 4.96);
+  assert.equal(tableCarry.pickUp(genericTableItem), true);
   tableThrow.dispose();
   tableStage.dispose();
 
@@ -718,6 +742,13 @@ try {
   );
   processingWorkMotion.update(0.1);
   assert.equal(workMode, 'processing');
+  workProcessing.updateVisual(0.1);
+  const stationVisualPosition = workItemFixture.items[0].object.position.clone();
+  processingWorkMotion.update(0.1);
+  assert.deepEqual(
+    workItemFixture.items[0].object.position.toArray(),
+    stationVisualPosition.toArray(),
+  );
   const progressBeforeWalking = workProcessing.processingProgress;
   workPlayer.currentSpeed = 1;
   processingWorkMotion.update(0.1);
@@ -793,6 +824,16 @@ try {
   assert.doesNotMatch(eventTypesSource, /throw_assist|dash_bump|work_motion/i);
   const taskSource = await readFile(new URL('../src/task/Task.ts', import.meta.url), 'utf8');
   assert.doesNotMatch(taskSource, /processing_motion|assembly_motion|bump/i);
+  const interactionSource = await readFile(
+    new URL('../src/interaction/InteractionSystem.ts', import.meta.url),
+    'utf8',
+  );
+  const workMotionSource = await readFile(
+    new URL('../src/interaction/WorkMotionSystem.ts', import.meta.url),
+    'utf8',
+  );
+  assert.match(interactionSource, /interactable\.updateVisual\?\.\(deltaSeconds\)/);
+  assert.doesNotMatch(workMotionSource, /station\.updateVisual\(/);
   const campaignScenesSource = await readFile(
     new URL('../src/content/campaign/campaignScenes.ts', import.meta.url),
     'utf8',

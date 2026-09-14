@@ -19,14 +19,7 @@ export class WorkMotionSystem {
     private readonly options: WorkMotionOptions,
   ) {}
 
-  public update(deltaSeconds: number): void {
-    for (const station of this.processingStations) {
-      station.updateVisual(deltaSeconds);
-    }
-    for (const station of this.assemblyStations) {
-      station.updateVisual(deltaSeconds);
-    }
-
+  public update(_deltaSeconds: number): void {
     if (this.player.currentSpeed > this.options.playerMaximumSpeed || this.player.isCarrying) {
       this.player.setWorkMode('none');
       return;

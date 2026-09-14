@@ -1,6 +1,7 @@
 import { Vector3, type Object3D, type Vector3Like } from 'three';
 import type { StageObstacleDefinition } from '../stage/StageTypes';
 import type { PickableItem } from './PickableItem';
+import type { PlacePoint } from './PlacePoint';
 import {
   THROW_RECEIVER_PRIORITY,
   type ThrowAssistContext,
@@ -18,6 +19,7 @@ export class TableThrowSurface implements ThrowReceiver {
     private readonly id: string,
     private readonly table: StageObstacleDefinition,
     private readonly allItems: readonly PickableItem[],
+    private readonly semanticPlacePoints: readonly PlacePoint[],
     private readonly landingSpacing: number,
     private readonly assistRadius: number,
   ) {
@@ -40,7 +42,7 @@ export class TableThrowSurface implements ThrowReceiver {
       return null;
     }
 
-    const target = new Vector3(
+    const captureTarget = new Vector3(
       clamp(
         context.intendedLanding.x,
         this.table.position.x - halfWidth,
@@ -53,7 +55,20 @@ export class TableThrowSurface implements ThrowReceiver {
         this.table.position.z + halfDepth,
       ),
     );
-    if (!this.isPositionFree(target, item, context.worldRoot)) {
+
+    const semanticCandidate = this.findSemanticCandidate(item, context, captureTarget);
+    if (semanticCandidate !== null) {
+      return semanticCandidate;
+    }
+
+    const target = this.findFreeTableTarget(
+      captureTarget,
+      item,
+      context.worldRoot,
+      halfWidth,
+      halfDepth,
+    );
+    if (target === null) {
       return null;
     }
 
@@ -91,6 +106,64 @@ export class TableThrowSurface implements ThrowReceiver {
       },
       cancel: release,
     };
+  }
+
+  private findSemanticCandidate(
+    item: PickableItem,
+    context: ThrowAssistContext,
+    captureTarget: Readonly<Vector3>,
+  ): ThrowReceiverCandidate | null {
+    const candidates = this.semanticPlacePoints
+      .map((placePoint) => placePoint.getThrowReceiverCandidate(item, context))
+      .filter((candidate): candidate is ThrowReceiverCandidate => candidate !== null)
+      .sort((left, right) => {
+        const leftDistance = planarDistanceSquared(left.targetPosition, captureTarget);
+        const rightDistance = planarDistanceSquared(right.targetPosition, captureTarget);
+        return leftDistance - rightDistance || compareIds(left.id, right.id);
+      });
+    const candidate = candidates[0];
+    if (candidate === undefined) {
+      return null;
+    }
+
+    return {
+      id: `${this.id}:${candidate.id}`,
+      priority: candidate.priority,
+      assistRadius: this.assistRadius,
+      // Selection uses the table capture point; the reservation still lands at the canonical anchor.
+      targetPosition: captureTarget,
+      reserve: candidate.reserve,
+    };
+  }
+
+  private findFreeTableTarget(
+    preferred: Readonly<Vector3>,
+    item: PickableItem,
+    worldRoot: Object3D,
+    halfWidth: number,
+    halfDepth: number,
+  ): Vector3 | null {
+    if (this.isPositionFree(preferred, item, worldRoot)) {
+      return preferred.clone();
+    }
+
+    const topY = this.table.position.y + this.table.size.y / 2;
+    const candidates: Vector3[] = [];
+    for (const xFactor of [-1, -0.5, 0, 0.5, 1]) {
+      for (const zFactor of [-1, 0, 1]) {
+        candidates.push(new Vector3(
+          this.table.position.x + halfWidth * xFactor,
+          topY,
+          this.table.position.z + halfDepth * zFactor,
+        ));
+      }
+    }
+    candidates.sort((left, right) => (
+      planarDistanceSquared(left, preferred) - planarDistanceSquared(right, preferred)
+      || left.x - right.x
+      || left.z - right.z
+    ));
+    return candidates.find((candidate) => this.isPositionFree(candidate, item, worldRoot)) ?? null;
   }
 
   private isPositionFree(
@@ -136,4 +209,15 @@ export class TableThrowSurface implements ThrowReceiver {
 
 function clamp(value: number, minimum: number, maximum: number): number {
   return Math.min(maximum, Math.max(minimum, value));
+}
+
+function planarDistanceSquared(
+  left: Readonly<Vector3Like>,
+  right: Readonly<Vector3Like>,
+): number {
+  return (left.x - right.x) ** 2 + (left.z - right.z) ** 2;
+}
+
+function compareIds(left: string, right: string): number {
+  return left < right ? -1 : left > right ? 1 : 0;
 }
