@@ -11,6 +11,13 @@ import {
 } from 'three';
 import type { Interactable, InteractionContext } from './Interactable';
 import type { PickableItem } from './PickableItem';
+import {
+  THROW_RECEIVER_PRIORITY,
+  type ThrowAssistContext,
+  type ThrowReceiver,
+  type ThrowReceiverCandidate,
+  type ThrowReceiverReservation,
+} from './ThrowReceiver';
 
 export type ProcessingStationState = 'empty' | 'loaded' | 'processing' | 'processed';
 
@@ -24,9 +31,10 @@ interface ProcessingStationOptions {
 
 const PROGRESS_FILL_WIDTH = 0.74;
 
-export class ProcessingStation implements Interactable {
+export class ProcessingStation implements Interactable, ThrowReceiver {
   public readonly id: string;
   public readonly object = new Group();
+  private readonly pad: Mesh;
   private readonly itemAnchor = new Group();
   private readonly highlight: Mesh;
   private readonly progressRoot = new Group();
@@ -36,6 +44,8 @@ export class ProcessingStation implements Interactable {
   private loadedItem: PickableItem | null = null;
   private elapsedProcessingSeconds = 0;
   private processingEnabled = false;
+  private reservedItem: PickableItem | null = null;
+  private workElapsedSeconds = 0;
 
   public constructor(private readonly options: ProcessingStationOptions) {
     this.id = options.id;
@@ -43,14 +53,14 @@ export class ProcessingStation implements Interactable {
     this.object.name = `ProcessingStation:${options.id}`;
     this.object.position.copy(options.position);
 
-    const pad = new Mesh(
+    this.pad = new Mesh(
       new BoxGeometry(1.15, 0.12, 0.9),
       new MeshStandardMaterial({ color: 0x628c7b, roughness: 0.68 }),
     );
-    pad.position.y = 0.06;
-    pad.castShadow = true;
-    pad.receiveShadow = true;
-    this.object.add(pad);
+    this.pad.position.y = 0.06;
+    this.pad.castShadow = true;
+    this.pad.receiveShadow = true;
+    this.object.add(this.pad);
 
     this.itemAnchor.name = 'ProcessingItemAnchor';
     this.itemAnchor.position.y = 0.13;
@@ -103,6 +113,7 @@ export class ProcessingStation implements Interactable {
   public setProcessingEnabled(enabled: boolean): void {
     this.processingEnabled = enabled;
     if (!enabled && this.stationState === 'processing') {
+      this.resetVisual();
       this.stationState = 'loaded';
       this.elapsedProcessingSeconds = 0;
       this.progressRoot.visible = false;
@@ -119,7 +130,11 @@ export class ProcessingStation implements Interactable {
     }
     if (this.stationState === 'empty') {
       const carriedItem = context.carry.item;
-      return carriedItem !== null && this.acceptedItemIds.has(carriedItem.id);
+      return (
+        this.reservedItem === null
+        && carriedItem !== null
+        && this.acceptedItemIds.has(carriedItem.id)
+      );
     }
     return this.stationState === 'loaded' && !context.carry.hasItem;
   }
@@ -135,7 +150,11 @@ export class ProcessingStation implements Interactable {
   }
 
   public interact(context: InteractionContext): boolean {
-    if (this.stationState === 'empty' && this.processingEnabled) {
+    if (
+      this.stationState === 'empty'
+      && this.processingEnabled
+      && this.reservedItem === null
+    ) {
       const carriedItem = context.carry.item;
       if (carriedItem === null || !this.acceptedItemIds.has(carriedItem.id)) {
         return false;
@@ -190,9 +209,52 @@ export class ProcessingStation implements Interactable {
 
     if (this.elapsedProcessingSeconds >= this.options.processingDurationSeconds) {
       this.loadedItem.markProcessed();
+      this.loadedItem.triggerWorkComplete();
       this.stationState = 'processed';
       this.progressRoot.visible = false;
     }
+  }
+
+  public updateVisual(deltaSeconds: number): void {
+    if (this.stationState !== 'processing' || this.loadedItem === null) {
+      this.resetVisual();
+      return;
+    }
+    const delta = Number.isFinite(deltaSeconds) ? Math.max(0, deltaSeconds) : 0;
+    this.workElapsedSeconds += delta;
+    const phase = this.workElapsedSeconds * 9;
+    this.pad.position.y = 0.06 + Math.sin(phase) * 0.018;
+    this.pad.rotation.z = Math.sin(phase * 0.5) * 0.012;
+    this.loadedItem.object.position.set(
+      Math.sin(phase * 1.7) * 0.045,
+      Math.abs(Math.sin(phase)) * 0.025,
+      Math.cos(phase * 1.3) * 0.025,
+    );
+    this.loadedItem.object.rotation.set(0, Math.sin(phase) * 0.08, Math.sin(phase * 1.7) * 0.05);
+  }
+
+  public getThrowReceiverCandidate(
+    item: PickableItem,
+    context: ThrowAssistContext,
+  ): ThrowReceiverCandidate | null {
+    if (
+      !this.processingEnabled
+      || this.stationState !== 'empty'
+      || this.reservedItem !== null
+      || !this.acceptedItemIds.has(item.id)
+      || !item.isActive
+    ) {
+      return null;
+    }
+    const targetPosition = this.itemAnchor.getWorldPosition(new Vector3());
+    context.worldRoot.worldToLocal(targetPosition);
+    return {
+      id: `processing-station:${this.id}`,
+      priority: THROW_RECEIVER_PRIORITY.station,
+      assistRadius: Number.POSITIVE_INFINITY,
+      targetPosition,
+      reserve: () => this.reserveThrow(item, targetPosition),
+    };
   }
 
   public getInteractionPosition(target: Vector3): Vector3 {
@@ -206,13 +268,58 @@ export class ProcessingStation implements Interactable {
   }
 
   public reset(): void {
+    this.resetVisual();
     this.loadedItem = null;
+    this.reservedItem = null;
     this.stationState = 'empty';
     this.elapsedProcessingSeconds = 0;
     this.processingEnabled = false;
     this.setHighlighted(false);
     this.progressRoot.visible = false;
     this.updateProgressVisual(0);
+  }
+
+  private reserveThrow(
+    item: PickableItem,
+    targetPosition: Readonly<Vector3>,
+  ): ThrowReceiverReservation | null {
+    if (
+      !this.processingEnabled
+      || this.stationState !== 'empty'
+      || this.reservedItem !== null
+      || !this.acceptedItemIds.has(item.id)
+    ) {
+      return null;
+    }
+    this.reservedItem = item;
+    let active = true;
+    const release = (): void => {
+      if (active && this.reservedItem === item) {
+        this.reservedItem = null;
+      }
+      active = false;
+    };
+    return {
+      targetPosition: targetPosition.clone(),
+      complete: (landedItem) => {
+        release();
+        this.loadedItem = landedItem;
+        landedItem.placeAt(this.itemAnchor);
+        this.stationState = landedItem.isProcessed ? 'processed' : 'loaded';
+        return null;
+      },
+      cancel: release,
+    };
+  }
+
+  public resetVisual(): void {
+    this.workElapsedSeconds = 0;
+    this.pad.position.y = 0.06;
+    this.pad.rotation.set(0, 0, 0);
+    if (this.loadedItem !== null) {
+      this.loadedItem.object.position.set(0, 0, 0);
+      this.loadedItem.object.rotation.set(0, 0, 0);
+    }
   }
 
   private updateProgressVisual(progress: number): void {

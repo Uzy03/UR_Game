@@ -122,6 +122,26 @@ export const GAME_CONFIG = {
     landingSearchStep: 0.2,
     inputDirectionThreshold: 0.1,
   },
+  throwAssist: {
+    endpointRadius: 1.05,
+    blendStartProgress: 0.6,
+    minimumForwardDot: 0.28,
+    maximumLateralOffset: 1.1,
+    npc: {
+      assistRadius: 0.72,
+      holdSeconds: 0.24,
+      releaseDistance: 0.92,
+    },
+  },
+  dashBump: {
+    combinedRadius: 0.84,
+    npcVisualOffset: 0.4,
+    recoverySeconds: 0.36,
+  },
+  workMotion: {
+    playerInteractionRadius: 1.7,
+    playerMaximumSpeed: 0.4,
+  },
   phase2: {
     taskDurationSeconds: 45,
     retryPlayerPosition: { x: 0, y: PLAYER_GROUNDED_Y, z: 4.1 },

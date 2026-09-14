@@ -9,6 +9,7 @@ import {
 import { disposeObject3D } from '../core/disposeObject3D';
 import { PickableItem } from '../interaction/PickableItem';
 import { PlacePoint } from '../interaction/PlacePoint';
+import { TableThrowSurface } from '../interaction/TableThrowSurface';
 import type { PhysicsBodyHandle, PhysicsWorld } from '../physics/PhysicsWorld';
 import type {
   StageDefinition,
@@ -17,6 +18,7 @@ import type {
 import { createStageDecoration } from './createStageDecoration';
 
 const TABLE_LEG_DARKEN = 0.15;
+const TABLE_PLACE_POINT_HEIGHT_TOLERANCE = 0.2;
 
 interface MeshShadowOptions {
   readonly castShadow: boolean;
@@ -36,6 +38,7 @@ export class Stage {
   public readonly object = new Group();
   public readonly pickableItems: readonly PickableItem[];
   public readonly placePoints: readonly PlacePoint[];
+  public readonly tableThrowSurfaces: readonly TableThrowSurface[];
   private readonly physicsHandles: PhysicsBodyHandle[] = [];
   private disposed = false;
 
@@ -43,6 +46,7 @@ export class Stage {
     parent: Object3D,
     physics: PhysicsWorld,
     private readonly options: StageDefinition,
+    throwSurfaceLandingSpacing = 0,
   ) {
     this.object.name = 'Stage';
     parent.add(this.object);
@@ -72,9 +76,24 @@ export class Stage {
         position: placePoint.position,
         parent: this.object,
       }));
+      this.tableThrowSurfaces = options.obstacles.flatMap((obstacle, index) => (
+        obstacle.kind === 'table'
+          ? [new TableThrowSurface(
+            `table-surface:${index}`,
+            obstacle,
+            this.pickableItems,
+            this.placePoints.filter((placePoint) => (
+              this.isPlacePointOnTable(placePoint, obstacle)
+            )),
+            throwSurfaceLandingSpacing,
+            Number.POSITIVE_INFINITY,
+          )]
+          : []
+      ));
     } catch (error: unknown) {
       this.pickableItems = [];
       this.placePoints = [];
+      this.tableThrowSurfaces = [];
       this.dispose();
       throw error;
     }
@@ -156,6 +175,19 @@ export class Stage {
       }
       return item;
     });
+  }
+
+  private isPlacePointOnTable(
+    placePoint: PlacePoint,
+    table: StageObstacleDefinition,
+  ): boolean {
+    const position = placePoint.object.position;
+    const topY = table.position.y + table.size.y / 2;
+    return (
+      Math.abs(position.x - table.position.x) <= table.size.x / 2
+      && Math.abs(position.z - table.position.z) <= table.size.z / 2
+      && Math.abs(position.y - topY) <= TABLE_PLACE_POINT_HEIGHT_TOLERANCE
+    );
   }
 
   private createFloor(physics: PhysicsWorld, options: StageDefinition): void {

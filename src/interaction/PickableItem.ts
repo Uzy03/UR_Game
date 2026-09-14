@@ -60,7 +60,7 @@ export class PickableItem implements Interactable {
   private state: PickableItemPlacementState = 'world';
   private itemProcessingState: ItemProcessingState = 'raw';
   private active = true;
-  private feedbackKind: 'none' | 'pickup' | 'settle' = 'none';
+  private feedbackKind: 'none' | 'pickup' | 'settle' | 'work-complete' = 'none';
   private feedbackElapsedSeconds = 0;
 
   public constructor(options: PickableItemOptions) {
@@ -146,17 +146,26 @@ export class PickableItem implements Interactable {
       return;
     }
 
-    const duration = this.feedbackKind === 'pickup' ? 0.2 : 0.28;
+    const duration = this.feedbackKind === 'pickup'
+      ? 0.2
+      : this.feedbackKind === 'work-complete'
+        ? 0.36
+        : 0.28;
     this.feedbackElapsedSeconds += Math.max(0, deltaSeconds);
     const progress = Math.min(1, this.feedbackElapsedSeconds / duration);
     if (this.feedbackKind === 'pickup') {
       const pop = Math.sin(progress * Math.PI);
       this.visual.position.y = pop * 0.16;
       this.visual.scale.setScalar(1 + pop * 0.13);
-    } else {
+    } else if (this.feedbackKind === 'settle') {
       const settle = Math.sin(progress * Math.PI * 2.5) * (1 - progress);
       this.visual.position.y = Math.max(0, settle * 0.08);
       this.visual.scale.set(1 + settle * 0.06, 1 - settle * 0.04, 1 + settle * 0.06);
+    } else {
+      const pop = Math.sin(progress * Math.PI);
+      this.visual.position.y = pop * 0.18;
+      this.visual.rotation.y = progress * Math.PI * 0.7;
+      this.visual.scale.setScalar(1 + pop * 0.16);
     }
 
     if (progress >= 1) {
@@ -190,6 +199,10 @@ export class PickableItem implements Interactable {
 
   public markProcessed(): void {
     this.setProcessingState('processed');
+  }
+
+  public triggerWorkComplete(): void {
+    this.startVisualFeedback('work-complete');
   }
 
   public activateAt(anchor: Object3D): void {
@@ -316,7 +329,7 @@ export class PickableItem implements Interactable {
     }
   }
 
-  private startVisualFeedback(kind: 'pickup' | 'settle'): void {
+  private startVisualFeedback(kind: 'pickup' | 'settle' | 'work-complete'): void {
     this.feedbackKind = kind;
     this.feedbackElapsedSeconds = 0;
   }
@@ -325,6 +338,7 @@ export class PickableItem implements Interactable {
     this.feedbackKind = 'none';
     this.feedbackElapsedSeconds = 0;
     this.visual.position.set(0, 0, 0);
+    this.visual.rotation.set(0, 0, 0);
     this.visual.scale.set(1, 1, 1);
   }
 

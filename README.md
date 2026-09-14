@@ -1,6 +1,6 @@
-# Anniversary Game — Phase 19
+# Anniversary Game — Phase 20
 
-交際1周年記念の短編3Dゲームです。Phase 19では、BedroomのPrologueと各Campaign stageの間に、グレーの小型車で`1-1`〜`1-5`を巡るWorld Map progressionを追加しています。
+交際1周年記念の短編3Dゲームです。Phase 20では既存Campaignへ、late-flight Throw Assist、DashによるNPCのvisual bump、Processing／Assemblyのprocedural work motionを追加しています。
 
 ## 実行
 
@@ -9,13 +9,13 @@ npm install
 npm run dev
 ```
 
-型チェックを含む本番ビルドは`npm run build`、Phase 19までのブラウザ非依存検証は`npm run validate:phase19`、ビルド結果の確認は`npm run preview`で行えます。
+型チェックを含む本番ビルドは`npm run build`、Phase 20までのブラウザ非依存検証は`npm run validate:phase20`、ビルド結果の確認は`npm run preview`で行えます。
 
 ## 操作
 
 - `W` / `A` / `S` / `D`: 移動
 - `Space`: 移動入力方向（無入力時は向いている方向）へDash
-- `Q`: 持っているアイテムを前方の床へThrow
+- `Q`: 持っているアイテムを前方へThrow。近い有効receiverには飛行後半で補正
 - `E`: 話す・会話を進める・アイテムを拾う／置く
 - `R`: 時間切れ画面からタスクをリトライ
 - `F`: 通常探索中にスマートフォンを開く／閉じる
@@ -24,7 +24,7 @@ npm run dev
 
 World Mapでは`WASD`で車を動かし、現在availableなnodeの近くで`E`を押してstageへ入ります。`Space` Dash、`Q` Throw、PhoneはWorld Mapでは無効です。
 
-起動時のStart Menuで`New Game`を選ぶと、架空の`campaign-bedroom`から始まります。Prologue後はWorld Mapへ移り、`1-1 Cafe`、`1-2 Park`、`1-3 Preparation Space`、`1-4 Viewpoint`、`1-5 Ending Room`を順番に解放します。Phase 19ではlocked／completed nodeへ入れず、完了stage replayも行いません。
+起動時のStart Menuで`New Game`を選ぶと、架空の`campaign-bedroom`から始まります。Prologue後はWorld Mapへ移り、`1-1 Cafe`、`1-2 Park`、`1-3 Preparation Space`、`1-4 Viewpoint`、`1-5 Ending Room`を順番に解放します。locked／completed nodeへ入れず、完了stage replayも行いません。
 
 任意の`public/private/campaign-story.json`が存在すると、ゲーム構造を変えずにCampaignのストーリー本文、NPC名、Objective、Task HUDを差し替えます。private写真は`/private/photos/`配下だけを許可します。設定方法と公開時の注意は[`docs/private-content.md`](docs/private-content.md)を参照してください。ファイルがなければ公開の架空ストーリーを使用し、存在するファイルが不正な場合は画面上の起動エラーで停止します。
 
@@ -43,11 +43,12 @@ New Gameのユーザー操作後にMain BGMが始まり、Transition CardとMemo
 1. 入力ソースを更新し、移動方向へ集約する
 2. Phone入力を処理し、必要ならそのフレームからゲーム入力を止める
 3. World Map activeなら車両とnode interactionだけを更新する
-4. Campaign stage activeならThrow、NPC、Player、Rapier、Interactionを更新する
-5. EventRunnerを更新し、完了したmap遷移要求をcommitする
-6. EventRunnerから独立したAudio fadeを更新する
-7. 現在mode専用の追従カメラとNPC吹き出しを更新する
-8. Three.jsで描画する
+4. Campaign stage activeならThrow／catch、NPC、Player、Rapierを更新し、解決後にDash bumpを判定する
+5. InteractionとEventRunnerを更新し、完了したmap遷移要求をcommitする
+6. active Stationと近くのPlayerへwork presentationを反映する
+7. EventRunnerから独立したAudio fadeを更新する
+8. 現在mode専用の追従カメラとNPC吹き出しを更新する
+9. Three.jsで描画する
 
 バックグラウンド復帰時の大きな移動を避けるため、1フレームの `deltaTime` には上限を設けています。
 
@@ -64,14 +65,18 @@ New Gameのユーザー操作後にMain BGMが始まり、Transition CardとMemo
 - `PlanarActionDirection`: Dash／Throwで共有する「移動入力、なければ向き」のXZ方向解決
 - `InteractionSystem`: プレイヤー前方の操作対象選択、Action入力、ハイライト、操作ヒント、成功時visual feedback通知
 - `CarrySystem`: 1個だけの保持状態、安全な床ドロップ、現在Sceneへの再binding
-- `ItemThrowSystem`: Throw要求、Stageの床判定を使う着地点探索、決定的な放物線、飛行中Itemのcleanupを管理
+- `ItemThrowSystem`: Throw要求、通常着地点、決定的receiver選択・予約、late-flight補間、catchを含むtransient cleanupを管理
+- `ThrowReceiver`: PlacePoint／Station／NPC／table surfaceが共有する候補・予約・着地の小さな契約
+- `TableThrowSurface`: publicなtable obstacle寸法からinset済み着地点を導出し、Itemを通常world状態で着地させる
+- `DashBumpSystem`: Rapier解決後のDash displacementとNPCのXZ接触を判定し、Dash中断とvisual reactionを調停
+- `WorkMotionSystem`: Station stateとPlayerの距離・実速度からpresentation-only work modeを選ぶ
 - `PickableItem`: 加工状態・active状態とworld／carried／placed／thrownを独立して持つ持ち運び可能アイテム
 - `PlacePoint`: 空き・配置済み状態と、台への配置・再取得
 - `ProcessingStation`: 1個のItemの配置、deltaTime加工、進捗表示、加工済みItemの再取得
 - `AssemblyStation`: 2個の入力Item、deltaTime組立、入力の無効化、完成Itemの有効化と再取得
 - `FollowCamera`: プレイヤーとは独立した固定斜め見下ろし、安定した追従、微小look-ahead、Scene jump時snap
 - `CharacterVisual`: Player／Companion共通のprimitive製チビrigを生成
-- `CharacterAnimator`: Rapier解決後の実移動量からidle／walk／carry／interact poseをdeltaTime更新
+- `CharacterAnimator`: Rapier解決後の実移動量とsemantic stateからidle／walk／carry／interact／work／impact poseをdeltaTime更新
 - `ContactShadow`: Characterを床へ視覚的に接地させる低コストblob shadow
 - `InteractionHighlight`: 選択中のringへ控えめなpulseを適用
 - `Stage`: Scene定義から表示物・静的コライダー・任意のvisual-only decorationを構築し、所有Resourceを破棄
@@ -122,17 +127,19 @@ New Gameのユーザー操作後にMain BGMが始まり、Transition CardとMemo
 - `loadCampaignStory`: 固定ローカルパスの取得、404時の架空フォールバック、invalid時のfail-closed
 - `createCampaignScenes`: Story由来のNPC名とTask labelを、固定Scene geometry・Task条件へ注入
 
-CampaignのScene、Phone content、Transition Card、Audio content、canonical Event Sequence、Checkpointは`src/content/campaign/`に分離しています。`campaignContent.ts`は検証済みStoryを固定のCampaign構造へ注入し、旧Phase 6〜10データと合わせてRegistryへ渡す薄いfactoryです。runtime managerではありません。CheckpointのresumeSequenceはcanonical segment列のsuffixから生成するため、Story本文・Transition Card・Audio CueをCheckpointごとに複製しません。
+CampaignのScene、Phone content、Transition Card、Audio content、canonical Event Sequence、Checkpointは`src/content/campaign/`に分離しています。`campaignContent.ts`は検証済みStoryを固定のCampaign構造へ注入し、旧Phase 6〜10データと合わせてRegistryへ渡す薄いfactoryです。runtime managerではありません。Phase 19以降のpost-stage resume sequenceはCheckpointからWorld Mapへ戻り、次のroute entryはauthoritative segment配列を参照します。
 
 全Campaign locationのpaletteと装飾groupは`campaignVisualStyle.ts`にあり、Story JSONやSaveへ入りません。CafeはPhase 16のreference qualityを維持し、Bedroom、Park、Prep Space、Viewpoint、Ending Roomは共通のminiature language内で個別のmoodとsilhouetteを持ちます。詳細は[`docs/phase-17-spec.md`](docs/phase-17-spec.md)を参照してください。
 
-Campaign専用の`Chapter`、`CampaignManager`、新しいTaskは追加していません。Phase 17でもGameEventの種類は増やしていません。`SceneManager`、Task、PhoneControllerはStory loaderを知らず、旧Phase 6〜12のScene・Phone content・Checkpointもv1 Save互換のため登録を維持しています。
+Campaign専用の`Chapter`、`CampaignManager`、新しいTaskは追加していません。Phase 20でもGameEventの種類は増やしていません。`SceneManager`、Task、PhoneControllerはStory loaderを知らず、旧Phase 6〜12のScene・Phone content・Checkpointもv1 Save互換のため登録を維持しています。
 
 `localStorage`ではGame Saveの`ur-game:save:v1`、Phone進行の`ur-game:phone-progress:v1`、World進行の`ur-game:world-progress:v1`を分離しています。既存2 schemaは変更せず、World進行は`{ version: 1, completedNodeIds: string[] }`だけを持ちます。旧saveにWorld進行がなくても、canonical checkpointから完了prefixを再構築します。車両座標、camera、hover状態は保存しません。
 
 入力ソースやゲームループの境界を保ち、キーコードは`KeyboardInput`のみに閉じ込めています。アイテムは操作性を優先してDynamicRigidBodyにせず、床・保持・PlacePointへの配置状態を明示的に切り替えています。
 
 World Mapの構成、route ID、save互換、sequence境界は[`docs/phase-19-spec.md`](docs/phase-19-spec.md)を参照してください。World Mapはfictionalなpublic構造だけで、実在住所・地理・車種・ナンバーなどの個人情報を持ちません。
+
+Phase 20のreceiver優先順位、assist／bump／work tuning、cleanup境界は[`docs/phase-20-spec.md`](docs/phase-20-spec.md)を参照してください。これらはpublic engine設定だけで、StoryやSave schemaへ新しいfieldを追加しません。
 
 ## Placeholder Audio
 

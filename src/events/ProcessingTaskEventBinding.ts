@@ -24,6 +24,7 @@ interface ProcessingTaskEventBindingOptions {
   readonly playerStartFacing: number;
   readonly resultOverlay: ResultOverlay;
   readonly speechBubble: SpeechBubble;
+  readonly resetFeelPresentation: () => void;
 }
 
 export class ProcessingTaskEventBinding implements TaskEventBinding {
@@ -49,6 +50,7 @@ export class ProcessingTaskEventBinding implements TaskEventBinding {
     } = this.options;
 
     itemThrow.cancelAll();
+    this.options.resetFeelPresentation();
     interaction.reset();
     carry.reset();
     for (const station of stations) {

@@ -11,6 +11,13 @@ import {
 } from 'three';
 import type { Interactable, InteractionContext } from './Interactable';
 import type { PickableItem } from './PickableItem';
+import {
+  THROW_RECEIVER_PRIORITY,
+  type ThrowAssistContext,
+  type ThrowReceiver,
+  type ThrowReceiverCandidate,
+  type ThrowReceiverReservation,
+} from './ThrowReceiver';
 
 export type AssemblyStationState =
   | 'empty'
@@ -31,9 +38,10 @@ interface AssemblyStationOptions {
 
 const PROGRESS_FILL_WIDTH = 0.82;
 
-export class AssemblyStation implements Interactable {
+export class AssemblyStation implements Interactable, ThrowReceiver {
   public readonly id: string;
   public readonly object = new Group();
+  private readonly pad: Mesh;
   private readonly inputAnchorA = new Group();
   private readonly inputAnchorB = new Group();
   private readonly outputAnchor = new Group();
@@ -46,6 +54,8 @@ export class AssemblyStation implements Interactable {
   private loadedInputB: PickableItem | null = null;
   private elapsedCombineSeconds = 0;
   private assemblyEnabled = false;
+  private reservedItem: PickableItem | null = null;
+  private workElapsedSeconds = 0;
 
   public constructor(private readonly options: AssemblyStationOptions) {
     this.id = options.id;
@@ -53,14 +63,14 @@ export class AssemblyStation implements Interactable {
     this.object.name = `AssemblyStation:${options.id}`;
     this.object.position.copy(options.position);
 
-    const pad = new Mesh(
+    this.pad = new Mesh(
       new BoxGeometry(1.5, 0.12, 0.95),
       new MeshStandardMaterial({ color: 0x6f7fa7, roughness: 0.64 }),
     );
-    pad.position.y = 0.06;
-    pad.castShadow = true;
-    pad.receiveShadow = true;
-    this.object.add(pad);
+    this.pad.position.y = 0.06;
+    this.pad.castShadow = true;
+    this.pad.receiveShadow = true;
+    this.object.add(this.pad);
 
     this.inputAnchorA.name = 'AssemblyInputAnchorA';
     this.inputAnchorA.position.set(-0.38, 0.13, 0);
@@ -117,6 +127,7 @@ export class AssemblyStation implements Interactable {
   public setAssemblyEnabled(enabled: boolean): void {
     this.assemblyEnabled = enabled;
     if (!enabled && this.stationState === 'combining') {
+      this.resetVisual();
       this.stationState = 'ready';
       this.elapsedCombineSeconds = 0;
       this.progressRoot.visible = false;
@@ -133,7 +144,11 @@ export class AssemblyStation implements Interactable {
     }
     if (context.carry.hasItem) {
       const carriedItem = context.carry.item;
-      return carriedItem !== null && this.getAvailableSlot(carriedItem) !== null;
+      return (
+        this.reservedItem === null
+        && carriedItem !== null
+        && this.getAvailableSlot(carriedItem) !== null
+      );
     }
     return this.stationState === 'ready';
   }
@@ -158,7 +173,7 @@ export class AssemblyStation implements Interactable {
       return false;
     }
 
-    if (context.carry.hasItem) {
+    if (context.carry.hasItem && this.reservedItem === null) {
       const carriedItem = context.carry.item;
       if (carriedItem === null) {
         return false;
@@ -214,6 +229,7 @@ export class AssemblyStation implements Interactable {
     this.updateProgressVisual(this.combineProgress);
 
     if (this.elapsedCombineSeconds >= this.options.combineDurationSeconds) {
+      this.resetVisual();
       this.loadedInputA.deactivate();
       this.loadedInputB.deactivate();
       this.loadedInputA = null;
@@ -222,6 +238,47 @@ export class AssemblyStation implements Interactable {
       this.stationState = 'completed';
       this.progressRoot.visible = false;
     }
+  }
+
+  public updateVisual(deltaSeconds: number): void {
+    if (
+      this.stationState !== 'combining'
+      || this.loadedInputA === null
+      || this.loadedInputB === null
+    ) {
+      this.resetVisual();
+      return;
+    }
+    const delta = Number.isFinite(deltaSeconds) ? Math.max(0, deltaSeconds) : 0;
+    this.workElapsedSeconds += delta;
+    const phase = this.workElapsedSeconds * 6.4;
+    const press = (Math.sin(phase) + 1) * 0.5;
+    this.pad.position.y = 0.06 + Math.sin(phase * 2) * 0.012;
+    this.pad.rotation.z = Math.sin(phase) * 0.018;
+    this.loadedInputA.object.position.set(press * 0.1, Math.sin(phase * 2) * 0.018, 0);
+    this.loadedInputB.object.position.set(-press * 0.1, -Math.sin(phase * 2) * 0.018, 0);
+    this.loadedInputA.object.rotation.set(0, press * 0.14, -press * 0.08);
+    this.loadedInputB.object.rotation.set(0, -press * 0.14, press * 0.08);
+  }
+
+  public getThrowReceiverCandidate(
+    item: PickableItem,
+    context: ThrowAssistContext,
+  ): ThrowReceiverCandidate | null {
+    const slot = this.getAvailableSlot(item);
+    if (!this.assemblyEnabled || slot === null || this.reservedItem !== null || !item.isActive) {
+      return null;
+    }
+    const anchor = slot === 'a' ? this.inputAnchorA : this.inputAnchorB;
+    const targetPosition = anchor.getWorldPosition(new Vector3());
+    context.worldRoot.worldToLocal(targetPosition);
+    return {
+      id: `assembly-station:${this.id}:${slot}`,
+      priority: THROW_RECEIVER_PRIORITY.station,
+      assistRadius: Number.POSITIVE_INFINITY,
+      targetPosition,
+      reserve: () => this.reserveThrow(item, slot, anchor, targetPosition),
+    };
   }
 
   public getInteractionPosition(target: Vector3): Vector3 {
@@ -235,14 +292,56 @@ export class AssemblyStation implements Interactable {
   }
 
   public reset(): void {
+    this.resetVisual();
     this.loadedInputA = null;
     this.loadedInputB = null;
+    this.reservedItem = null;
     this.stationState = 'empty';
     this.elapsedCombineSeconds = 0;
     this.assemblyEnabled = false;
     this.setHighlighted(false);
     this.progressRoot.visible = false;
     this.updateProgressVisual(0);
+  }
+
+  private reserveThrow(
+    item: PickableItem,
+    slot: 'a' | 'b',
+    anchor: Group,
+    targetPosition: Readonly<Vector3>,
+  ): ThrowReceiverReservation | null {
+    if (
+      !this.assemblyEnabled
+      || this.reservedItem !== null
+      || this.getAvailableSlot(item) !== slot
+    ) {
+      return null;
+    }
+    this.reservedItem = item;
+    let active = true;
+    const release = (): void => {
+      if (active && this.reservedItem === item) {
+        this.reservedItem = null;
+      }
+      active = false;
+    };
+    return {
+      targetPosition: targetPosition.clone(),
+      complete: (landedItem) => {
+        release();
+        if (slot === 'a') {
+          this.loadedInputA = landedItem;
+        } else {
+          this.loadedInputB = landedItem;
+        }
+        landedItem.placeAt(anchor);
+        this.stationState = this.loadedInputA !== null && this.loadedInputB !== null
+          ? 'ready'
+          : 'one-loaded';
+        return null;
+      },
+      cancel: release,
+    };
   }
 
   private getAvailableSlot(item: PickableItem): 'a' | 'b' | null {
@@ -256,6 +355,18 @@ export class AssemblyStation implements Interactable {
       return 'b';
     }
     return null;
+  }
+
+  public resetVisual(): void {
+    this.workElapsedSeconds = 0;
+    this.pad.position.y = 0.06;
+    this.pad.rotation.set(0, 0, 0);
+    for (const item of [this.loadedInputA, this.loadedInputB]) {
+      if (item !== null) {
+        item.object.position.set(0, 0, 0);
+        item.object.rotation.set(0, 0, 0);
+      }
+    }
   }
 
   private updateProgressVisual(progress: number): void {

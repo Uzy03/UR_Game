@@ -29,6 +29,7 @@ interface PlacementTaskEventBindingOptions {
   readonly preserveItemProcessingOnRetry?: boolean;
   readonly preserveItemRuntimeOnRetry?: boolean;
   readonly worldRoot: Object3D;
+  readonly resetFeelPresentation: () => void;
   readonly resetBeforeItems?: () => void;
 }
 
@@ -56,6 +57,7 @@ export class PlacementTaskEventBinding implements TaskEventBinding {
     } = this.options;
 
     itemThrow.cancelAll();
+    this.options.resetFeelPresentation();
     interaction.reset();
     const preserveCurrentWorld = (
       this.options.preserveWorldOnFirstAttempt === true
