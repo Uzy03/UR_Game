@@ -113,7 +113,7 @@ export class WorldMapController implements WorldMapActions {
       vehiclePosition.z - available.position.z,
     ) <= this.options.interactionRadius;
     if (available !== null && inRange) {
-      this.dependencies.promptElement.textContent = `E : Enter ${available.label}`;
+      this.dependencies.promptElement.textContent = `E / ○ : Enter ${available.label}`;
       this.dependencies.promptElement.hidden = false;
     } else {
       this.dependencies.promptElement.hidden = true;

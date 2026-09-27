@@ -1,3 +1,6 @@
+import { InputAction } from '../input/InputAction';
+import type { InputManager } from '../input/InputManager';
+
 interface StartMenuHandlers {
   readonly onNewGame: () => void;
   readonly onContinue: () => void;
@@ -23,8 +26,9 @@ export class StartMenu {
   private handlers: StartMenuHandlers = EMPTY_HANDLERS;
   private canContinue = false;
   private busy = false;
+  private stickLatched = false;
 
-  public constructor(private readonly element: HTMLElement) {
+  public constructor(private readonly element: HTMLElement, private readonly input: InputManager) {
     const newGameButton = element.querySelector<HTMLButtonElement>('[data-start-new]');
     const continueButton = element.querySelector<HTMLButtonElement>('[data-start-continue]');
     const resetButton = element.querySelector<HTMLButtonElement>('[data-start-reset]');
@@ -56,6 +60,7 @@ export class StartMenu {
     this.statusElement.textContent = state.message ?? '';
     this.element.hidden = false;
     this.refreshButtons();
+    this.stickLatched = false;
     if (!this.busy) {
       this.newGameButton.focus();
     }
@@ -63,6 +68,7 @@ export class StartMenu {
 
   public hide(): void {
     this.element.hidden = true;
+    this.stickLatched = false;
     this.statusElement.textContent = '';
   }
 
@@ -70,6 +76,26 @@ export class StartMenu {
     this.busy = busy;
     this.element.setAttribute('aria-busy', String(busy));
     this.refreshButtons();
+  }
+
+  public update(): void {
+    if (this.element.hidden || this.busy) return;
+    const y = this.input.getMovement().y;
+    if (Math.abs(y) < 0.25) this.stickLatched = false;
+    if (!this.stickLatched && Math.abs(y) >= 0.55) {
+      const buttons = [this.newGameButton, this.continueButton, this.resetButton]
+        .filter((button) => !button.hidden && !button.disabled);
+      const current = buttons.indexOf(this.element.ownerDocument.activeElement as HTMLButtonElement);
+      const next = Math.max(0, Math.min(buttons.length - 1, current + Math.sign(y)));
+      buttons[next]?.focus();
+      this.stickLatched = true;
+    }
+    if (this.input.consumeActionPress(InputAction.Interact)) {
+      const focused = this.element.ownerDocument.activeElement;
+      const button = [this.newGameButton, this.continueButton, this.resetButton]
+        .find((candidate) => candidate === focused && !candidate.disabled && !candidate.hidden);
+      button?.click();
+    }
   }
 
   public dispose(): void {

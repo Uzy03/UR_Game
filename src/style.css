@@ -287,6 +287,7 @@ body,
   position: fixed;
   right: 18px;
   bottom: 18px;
+  max-width: min(760px, calc(100vw - 36px));
   display: flex;
   align-items: center;
   gap: 5px;
@@ -297,6 +298,8 @@ body,
   background: rgb(250 241 224 / 78%);
   box-shadow: 0 6px 22px rgb(91 59 45 / 14%);
   font-size: 12px;
+  line-height: 1.5;
+  text-align: right;
   pointer-events: none;
   backdrop-filter: blur(6px);
 }

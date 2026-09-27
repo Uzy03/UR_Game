@@ -51,6 +51,10 @@ export class PhoneController implements PhoneStoryActions {
   }
 
   public update(): void {
+    if (this.mode === 'story' && this.options.input.consumeActionPress(InputAction.Interact)) {
+      this.completeStoryPresentation();
+      return;
+    }
     if (this.options.input.consumeActionPress(InputAction.Phone)) {
       if (this.mode === 'story') {
         return;

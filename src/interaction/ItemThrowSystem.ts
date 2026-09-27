@@ -221,6 +221,10 @@ export class ItemThrowSystem {
     }
 
     const requested = this.input.consumeActionPress(InputAction.Throw);
+    if (requested && this.carry.hasItem) {
+      // Triangle's Work edge belongs to this throw, even if it lands this frame.
+      this.input.consumeActionPress(InputAction.Work);
+    }
     if (requested && this.player.isMovementEnabled) {
       this.tryStartThrow();
     }

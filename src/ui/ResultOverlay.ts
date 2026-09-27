@@ -17,7 +17,7 @@ export class ResultOverlay {
 
   public show(result: TaskResult): void {
     this.titleElement.textContent = result === 'succeeded' ? 'CLEAR!' : 'TIME UP!';
-    this.retryElement.textContent = result === 'failed' ? 'R : Retry' : '';
+    this.retryElement.textContent = result === 'failed' ? 'R / ○ : Retry' : '';
     this.element.hidden = false;
   }
 

@@ -50,7 +50,8 @@ export class InteractionSystem {
 
     this.refreshTargetAndPrompt();
 
-    if (!this.input.consumeActionPress(InputAction.Interact)) {
+    const action = this.currentTarget?.getInteractionAction?.(this.context) ?? InputAction.Interact;
+    if (!this.input.consumeActionPress(action)) {
       return;
     }
 
@@ -152,7 +153,10 @@ export class InteractionSystem {
     this.setCurrentTarget(bestTarget);
 
     if (this.currentTarget !== null) {
-      this.prompt.setLabel(this.currentTarget.getInteractionLabel(this.context));
+      this.prompt.setLabel(
+        this.currentTarget.getInteractionLabel(this.context),
+        this.currentTarget.getInteractionAction?.(this.context) ?? InputAction.Interact,
+      );
     } else {
       this.prompt.setLabel(this.getValidFloorDropPosition() === null ? null : 'Drop');
     }
