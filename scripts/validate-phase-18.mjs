@@ -432,8 +432,8 @@ try {
   assert.match(sceneManagerSource, /stage\.isFloorDropPositionValid/);
 
   const runtimeHtml = await readFile(new URL('../index.html', import.meta.url), 'utf8');
-  assert.match(runtimeHtml, /Anniversary Game — Phase 2[01]/);
-  assert.match(runtimeHtml, /Phase 2[01] (?:Interaction Feel|Gamepad Input)/);
+  assert.match(runtimeHtml, /Anniversary Game — Phase 2[012]/);
+  assert.match(runtimeHtml, /Phase 2[012] (?:Interaction Feel|Gamepad Input|Smartphone Hub)/);
   assert.match(runtimeHtml, /Space \/ ×: Dash/);
   assert.match(runtimeHtml, /E \/ ○: Interact/);
   assert.match(runtimeHtml, /Q \/ △: Throw/);

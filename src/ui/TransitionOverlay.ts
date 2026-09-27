@@ -34,6 +34,10 @@ export class TransitionOverlay implements TransitionActions {
     this.element.classList.add('is-active');
   }
 
+  public setPresentationPaused(paused: boolean): void {
+    this.element.classList.toggle('is-paused', paused);
+  }
+
   public hide(): void {
     this.element.classList.remove('is-active');
     this.element.hidden = true;

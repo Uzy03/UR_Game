@@ -72,7 +72,7 @@ try {
     assert.equal(gamepad.isActionPressed(action), true, `${action} held`);
     assert.equal(gamepad.wasActionPressed(action), true, `${action} edge`);
   }
-  assert.equal(gamepad.isActionPressed(InputAction.Back), false);
+  assert.equal(gamepad.isActionPressed(InputAction.Back), true);
   first.buttons[2].pressed = false;
   gamepad.update();
   for (const action of [InputAction.Dash, InputAction.Interact, InputAction.Retry, InputAction.Throw, InputAction.Work, InputAction.Phone]) {
@@ -291,9 +291,10 @@ try {
   let completed = 0;
   const phone = new PhoneController({
     input: phoneInput,
-    player: { isMovementEnabled: true, setMovementEnabled() {} },
-    interaction: { isInteractionEnabled: true, setEnabled() {} },
     progress: { snapshot: {} }, content: {},
+    route: { nodes: [] }, worldProgress: { completedNodeIds: [] },
+    settings: { subscribe: () => () => {}, snapshot: {} },
+    returnToTitle() {},
     ui: phoneUI, canOpen: () => true, focusTarget: { focus() {} },
   });
   assert.equal(phone.presentStoryCard({}, () => { completed += 1; }), true);

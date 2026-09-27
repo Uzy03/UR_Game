@@ -7,6 +7,7 @@ export const DEFAULT_GAMEPAD_DEADZONE = 0.18;
 
 const BUTTON_ACTIONS: ReadonlyMap<InputAction, number> = new Map([
   [InputAction.Dash, 0],
+  [InputAction.Back, 0],
   [InputAction.Interact, 1],
   [InputAction.Retry, 1],
   [InputAction.Throw, 3],

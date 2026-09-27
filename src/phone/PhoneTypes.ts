@@ -59,4 +59,5 @@ export interface PhoneStoryActions {
   cancelStoryPresentation(): void;
 }
 
-export type PhoneScreen = 'home' | 'messages' | 'album' | 'story';
+export type PhoneScreen = 'home' | 'messages' | 'album' | 'memories' | 'profile'
+  | 'settings' | 'return-confirm' | 'story';
