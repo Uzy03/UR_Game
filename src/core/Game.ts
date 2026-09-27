@@ -36,6 +36,7 @@ import { DialogueManager } from '../dialogue/DialogueManager';
 import { EventRunner } from '../events/EventRunner';
 import type { TaskEventBinding } from '../events/TaskEventBinding';
 import { InputManager } from '../input/InputManager';
+import { GamepadInput } from '../input/GamepadInput';
 import { KeyboardInput } from '../input/KeyboardInput';
 import { CarrySystem } from '../interaction/CarrySystem';
 import { InteractionSystem } from '../interaction/InteractionSystem';
@@ -85,6 +86,7 @@ export class Game {
   private readonly camera: PerspectiveCamera;
   private readonly renderer: WebGLRenderer;
   private readonly input: InputManager;
+  private readonly startMenu: StartMenu;
   private readonly physics: PhysicsWorld;
   private readonly player: PlayerController;
   private readonly carry: CarrySystem;
@@ -130,7 +132,7 @@ export class Game {
       GAME_CONFIG.camera.far,
     );
 
-    this.input = new InputManager([new KeyboardInput(window)]);
+    this.input = new InputManager([new KeyboardInput(window), new GamepadInput()]);
     const sceneContent = new SceneContentRegistry(content.scenes);
     const initialScene = sceneContent.getScene(content.initialSceneId);
     if (initialScene === undefined) {
@@ -425,6 +427,7 @@ export class Game {
     worldMapTarget = this.worldMap;
     this.followCamera.snapToTarget();
 
+    this.startMenu = new StartMenu(requireElement('start-menu'), this.input);
     this.progress = new GameProgressController({
       initialCheckpointId: content.initialCheckpointId,
       checkpoints: checkpointRegistry,
@@ -436,7 +439,7 @@ export class Game {
       player: this.player,
       interaction: this.interaction,
       npcs: this.npcs,
-      menu: new StartMenu(requireElement('start-menu')),
+      menu: this.startMenu,
       focusTarget: this.renderer.domElement,
       worldMap: this.worldMap,
       worldProgress,
@@ -518,6 +521,7 @@ export class Game {
 
     // Controllers submit movement before the physics step; visuals only read the resolved pose afterward.
     this.input.update();
+    this.startMenu.update();
     if (this.worldMap.isActive) {
       this.worldMap.update(deltaSeconds);
     } else if (this.sceneManager.currentSceneId !== null) {
