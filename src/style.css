@@ -225,6 +225,11 @@ body,
   animation: transition-card-cycle var(--transition-card-duration, 2.2s) ease-in-out both;
 }
 
+.transition-overlay.is-active.is-paused,
+.transition-overlay.is-active.is-paused .transition-card {
+  animation-play-state: paused;
+}
+
 .transition-eyebrow {
   margin: 0;
   color: #d8b980;
@@ -477,7 +482,7 @@ body,
 
 .phone-overlay {
   position: fixed;
-  z-index: 10;
+  z-index: 50;
   inset: 0;
   display: grid;
   place-items: center;

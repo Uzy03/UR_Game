@@ -30,6 +30,49 @@ try {
   const { PhoneController } = await load('/src/phone/PhoneController.ts');
   const { clearedMemories, profileView } = await load('/src/phone/PhoneHubData.ts');
   const { GameProgressController } = await load('/src/save/GameProgressController.ts');
+  const { TransitionOverlay } = await load('/src/ui/TransitionOverlay.ts');
+
+  const transitionClasses = new Set();
+  const transitionStyles = new Map();
+  const transitionText = new Map([
+    ['[data-transition-eyebrow]', { textContent: '', hidden: true }],
+    ['[data-transition-title]', { textContent: '' }],
+    ['[data-transition-subtitle]', { textContent: '', hidden: true }],
+  ]);
+  let transitionRestarts = 0;
+  const transitionElement = {
+    hidden: true,
+    classList: {
+      add(name) { transitionClasses.add(name); },
+      remove(name) { transitionClasses.delete(name); },
+      toggle(name, enabled) {
+        if (enabled) transitionClasses.add(name);
+        else transitionClasses.delete(name);
+      },
+    },
+    style: {
+      setProperty(name, value) { transitionStyles.set(name, value); },
+      removeProperty(name) { transitionStyles.delete(name); },
+    },
+    querySelector(selector) { return transitionText.get(selector) ?? null; },
+    setAttribute() {},
+    get offsetWidth() { transitionRestarts += 1; return 100; },
+  };
+  const transition = new TransitionOverlay(transitionElement);
+  transition.show({ title: 'Next stage', durationSeconds: 2.2 });
+  assert.equal(transitionRestarts, 1);
+  assert.equal(transitionClasses.has('is-active'), true);
+  transition.setPresentationPaused(true);
+  assert.equal(transitionClasses.has('is-paused'), true);
+  assert.equal(transitionElement.hidden, false);
+  assert.equal(transitionText.get('[data-transition-title]').textContent, 'Next stage');
+  assert.equal(transitionStyles.get('--transition-card-duration'), '2.2s');
+  transition.setPresentationPaused(true);
+  transition.setPresentationPaused(false);
+  assert.equal(transitionClasses.has('is-paused'), false);
+  assert.equal(transitionClasses.has('is-active'), true);
+  assert.equal(transitionRestarts, 1, 'pause/resume must not restart the transition cycle');
+  transition.hide();
 
   const storage = new MemoryStorage();
   const store = new SettingsStore(() => storage);
@@ -187,7 +230,10 @@ try {
   input.press(InputAction.Phone);
   phone.update();
   assert.equal(phone.isNormalOpen, true);
-  assert.equal(phone.consumeSimulationGate(), true);
+  transition.show({ title: 'Between stages', durationSeconds: 2.2 });
+  transition.setPresentationPaused(phone.consumeSimulationGate());
+  assert.equal(transitionClasses.has('is-paused'), true);
+  assert.equal(transitionRestarts, 2);
   phone.update(); // neutral re-arms navigation after opening while driving
   input.movement.y = 1;
   phone.update();
@@ -212,8 +258,17 @@ try {
   input.press(InputAction.Phone);
   phone.update();
   assert.equal(phone.isNormalOpen, false);
-  assert.equal(phone.consumeSimulationGate(), true, 'close frame stays gated');
-  assert.equal(phone.consumeSimulationGate(), false, 'next frame may resume');
+  const closingGate = phone.consumeSimulationGate();
+  assert.equal(closingGate, true, 'close frame stays gated');
+  transition.setPresentationPaused(closingGate);
+  assert.equal(transitionClasses.has('is-paused'), true, 'visual remains paused on close frame');
+  const resumedGate = phone.consumeSimulationGate();
+  assert.equal(resumedGate, false, 'next frame may resume');
+  transition.setPresentationPaused(resumedGate);
+  assert.equal(transitionClasses.has('is-paused'), false);
+  assert.equal(transitionClasses.has('is-active'), true);
+  assert.equal(transitionRestarts, 2, 'closing the Smartphone cannot restart the card');
+  transition.hide();
   assert.equal(returned, 0);
   input.press(InputAction.Phone);
   phone.update();
@@ -289,9 +344,11 @@ try {
   const inputIndex = frame.indexOf('this.input.update()');
   const phoneIndex = frame.indexOf('this.phone.update()');
   const gateIndex = frame.indexOf('if (!simulationGated && this.progress.isGameActive)');
+  const transitionPauseIndex = frame.indexOf('this.transition.setPresentationPaused(simulationGated)');
   const audioIndex = frame.indexOf('this.audio.update(deltaSeconds)');
   const renderIndex = frame.indexOf('this.renderer.render(this.scene, this.camera)');
-  assert.ok(inputIndex >= 0 && inputIndex < phoneIndex && phoneIndex < gateIndex);
+  assert.ok(inputIndex >= 0 && inputIndex < phoneIndex && phoneIndex < transitionPauseIndex);
+  assert.ok(transitionPauseIndex < gateIndex, 'transition presentation follows the same gate as EventRunner');
   assert.ok(gateIndex < audioIndex && audioIndex < renderIndex);
   const gated = frame.slice(gateIndex, audioIndex);
   for (const call of [
@@ -303,6 +360,11 @@ try {
     'this.sceneManager.updatePresentation(deltaSeconds)', 'this.worldMap.updateCamera(deltaSeconds)',
     'this.followCamera.update(deltaSeconds)', 'this.speechBubble.update(this.camera, deltaSeconds)',
   ]) assert.ok(gated.includes(call), `${call} must be gated`);
+  const css = await read('../src/style.css');
+  const transitionZIndex = Number(css.match(/\.transition-overlay\s*\{[^}]*z-index:\s*(\d+)/s)?.[1]);
+  const phoneZIndex = Number(css.match(/\.phone-overlay\s*\{[^}]*z-index:\s*(\d+)/s)?.[1]);
+  assert.ok(phoneZIndex > transitionZIndex, 'Smartphone must receive input above Transition Card');
+  assert.match(css, /\.transition-overlay\.is-active\.is-paused,\s*\.transition-overlay\.is-active\.is-paused \.transition-card\s*\{\s*animation-play-state:\s*paused;/);
   assert.ok(frame.indexOf('this.lastFrameTime = timestamp') < phoneIndex);
   assert.doesNotMatch(await read('../src/phone/PhoneController.ts'), /setMovementEnabled|setEnabled\(|cancelAll|reset\(/);
   assert.doesNotMatch(await read('../src/save/GameProgressController.ts'), /location\.reload/);

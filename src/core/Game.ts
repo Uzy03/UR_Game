@@ -95,6 +95,7 @@ export class Game {
   private readonly itemThrow: ItemThrowSystem;
   private readonly dashBump: DashBumpSystem;
   private readonly eventRunner: EventRunner;
+  private readonly transition: TransitionOverlay;
   private readonly audio: AudioManager;
   private readonly audioMediaFactory: BrowserAudioMediaFactory;
   private readonly audioMuteButton: AudioMuteButton;
@@ -190,6 +191,7 @@ export class Game {
     const taskHud = new TaskHUD(requireElement('task-hud'));
     const resultOverlay = new ResultOverlay(requireElement('result-overlay'));
     const transition = new TransitionOverlay(requireElement('transition-overlay'));
+    this.transition = transition;
     this.speechBubble = new SpeechBubble(requireElement('speech-bubble'), container);
     const phoneContent = new PhoneContentRegistry(content.phoneContent);
     const phoneProgress = new PhoneProgress(phoneContent, new PhoneProgressStore());
@@ -521,6 +523,7 @@ export class Game {
     this.startMenu.update();
     this.phone.update();
     const simulationGated = this.phone.consumeSimulationGate();
+    this.transition.setPresentationPaused(simulationGated);
     if (!simulationGated && this.progress.isGameActive) {
       if (this.worldMap.isActive) {
         this.worldMap.update(deltaSeconds);
