@@ -434,9 +434,9 @@ try {
   const runtimeHtml = await readFile(new URL('../index.html', import.meta.url), 'utf8');
   assert.match(runtimeHtml, /Anniversary Game — Phase 2[01]/);
   assert.match(runtimeHtml, /Phase 2[01] (?:Interaction Feel|Gamepad Input)/);
-  assert.match(runtimeHtml, /Space \/ ○: Dash/);
-  assert.match(runtimeHtml, /E \/ ×: Interact/);
-  assert.match(runtimeHtml, /Q \/ □: Throw/);
+  assert.match(runtimeHtml, /Space \/ ×: Dash/);
+  assert.match(runtimeHtml, /E \/ ○: Interact/);
+  assert.match(runtimeHtml, /Q \/ △: Throw/);
   assert.doesNotMatch(runtimeHtml, /E \/ Space/);
   assert.doesNotMatch(runtimeHtml, /<kbd>Shift/);
 
@@ -444,7 +444,7 @@ try {
     new URL('../src/ui/InteractionPrompt.ts', import.meta.url),
     'utf8',
   );
-  assert.match(interactionPromptSource, /`E \/ × : \$\{label\}`/);
+  assert.match(interactionPromptSource, /action === InputAction\.Work \? '△' : '○'/);
 
   console.log('Phase 18 browser-free validation passed.');
 } finally {

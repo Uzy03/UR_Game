@@ -10,6 +10,7 @@ import {
   Vector3,
 } from 'three';
 import type { Interactable, InteractionContext } from './Interactable';
+import { InputAction } from '../input/InputAction';
 import type { PickableItem } from './PickableItem';
 import {
   THROW_RECEIVER_PRIORITY,
@@ -160,6 +161,10 @@ export class AssemblyStation implements Interactable, ThrowReceiver {
     return context.carry.hasItem ? 'Place' : 'Combine';
   }
 
+  public getInteractionAction(_context: InteractionContext): InputAction {
+    return this.stationState === 'ready' ? InputAction.Work : InputAction.Interact;
+  }
+
   public interact(context: InteractionContext): boolean {
     if (this.stationState === 'completed' && !context.carry.hasItem) {
       if (!context.carry.pickUp(this.options.outputItem)) {
@@ -199,7 +204,7 @@ export class AssemblyStation implements Interactable, ThrowReceiver {
       return true;
     }
 
-    if (this.stationState === 'ready') {
+    if (this.stationState === 'ready' && !context.carry.hasItem) {
       this.stationState = 'combining';
       this.elapsedCombineSeconds = 0;
       this.updateProgressVisual(0);

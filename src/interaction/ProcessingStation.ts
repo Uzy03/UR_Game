@@ -10,6 +10,7 @@ import {
   Vector3,
 } from 'three';
 import type { Interactable, InteractionContext } from './Interactable';
+import { InputAction } from '../input/InputAction';
 import type { PickableItem } from './PickableItem';
 import {
   THROW_RECEIVER_PRIORITY,
@@ -149,6 +150,10 @@ export class ProcessingStation implements Interactable, ThrowReceiver {
     return 'Pick up';
   }
 
+  public getInteractionAction(_context: InteractionContext): InputAction {
+    return this.stationState === 'loaded' ? InputAction.Work : InputAction.Interact;
+  }
+
   public interact(context: InteractionContext): boolean {
     if (
       this.stationState === 'empty'
@@ -169,7 +174,7 @@ export class ProcessingStation implements Interactable, ThrowReceiver {
       return true;
     }
 
-    if (this.stationState === 'loaded' && this.processingEnabled) {
+    if (this.stationState === 'loaded' && this.processingEnabled && !context.carry.hasItem) {
       this.stationState = 'processing';
       this.elapsedProcessingSeconds = 0;
       this.updateProgressVisual(0);

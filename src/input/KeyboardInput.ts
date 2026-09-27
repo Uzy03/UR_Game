@@ -49,6 +49,9 @@ export class KeyboardInput implements InputSource {
   }
 
   public isActionPressed(action: InputAction): boolean {
+    if (action === InputAction.Work && this.pressedCodes.has('KeyE')) {
+      return true;
+    }
     for (const code of this.pressedCodes) {
       if (ACTION_BY_CODE.get(code) === action) {
         return true;
@@ -83,6 +86,9 @@ export class KeyboardInput implements InputSource {
       const action = ACTION_BY_CODE.get(event.code);
       if (action !== undefined) {
         this.pendingActionPresses.add(action);
+        if (action === InputAction.Interact) {
+          this.pendingActionPresses.add(InputAction.Work);
+        }
       }
       if (MOVEMENT_CODES.has(event.code)) {
         this.movementActiveUntil.set(

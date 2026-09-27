@@ -6,12 +6,12 @@ export type GamepadProvider = () => readonly (Gamepad | null)[];
 export const DEFAULT_GAMEPAD_DEADZONE = 0.18;
 
 const BUTTON_ACTIONS: ReadonlyMap<InputAction, number> = new Map([
-  [InputAction.Interact, 0],
-  [InputAction.Retry, 0],
-  [InputAction.Dash, 1],
-  [InputAction.Throw, 2],
-  [InputAction.Phone, 3],
-  [InputAction.Back, 9],
+  [InputAction.Dash, 0],
+  [InputAction.Interact, 1],
+  [InputAction.Retry, 1],
+  [InputAction.Throw, 3],
+  [InputAction.Work, 3],
+  [InputAction.Phone, 9],
 ]);
 
 function browserGamepads(): readonly (Gamepad | null)[] {

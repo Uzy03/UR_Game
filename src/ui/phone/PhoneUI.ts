@@ -181,7 +181,7 @@ export class PhoneUI {
       actionButton.disabled = true;
       onAction();
     }, { once: true });
-    storyCard.append(actionButton, this.createElement('p', 'phone-section-label', 'E / × : Continue'));
+    storyCard.append(actionButton, this.createElement('p', 'phone-section-label', 'E / ○ : Continue'));
     this.screenElement.append(storyCard);
     return actionButton;
   }
