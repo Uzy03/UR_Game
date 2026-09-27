@@ -1,9 +1,11 @@
 import { InputAction } from '../input/InputAction';
 import type { InputManager } from '../input/InputManager';
-import type { InteractionSystem } from '../interaction/InteractionSystem';
-import type { PlayerController } from '../player/PlayerController';
+import type { SettingsController, VolumeSetting } from '../settings/SettingsController';
 import type { PhoneMessageThreadView, PhoneUI } from '../ui/phone/PhoneUI';
+import type { WorldProgress } from '../world/WorldProgress';
+import type { WorldRoute } from '../world/WorldRoute';
 import type { PhoneContentRegistry } from './PhoneContentRegistry';
+import { clearedMemories, profileView } from './PhoneHubData';
 import type { PhoneProgress } from './PhoneProgress';
 import type {
   PhoneMessageDefinition,
@@ -15,12 +17,14 @@ import type {
 
 interface PhoneControllerOptions {
   readonly input: InputManager;
-  readonly player: PlayerController;
-  readonly interaction: InteractionSystem;
   readonly progress: PhoneProgress;
   readonly content: PhoneContentRegistry;
+  readonly route: WorldRoute;
+  readonly worldProgress: WorldProgress;
+  readonly settings: SettingsController;
   readonly ui: PhoneUI;
   readonly canOpen: () => boolean;
+  readonly returnToTitle: () => void;
   readonly focusTarget: HTMLElement;
 }
 
@@ -30,8 +34,9 @@ type PhonePresentationMode = 'closed' | 'normal' | 'story';
 export class PhoneController implements PhoneStoryActions {
   private screen: NormalPhoneScreen = 'home';
   private mode: PhonePresentationMode = 'closed';
-  private savedMovementEnabled: boolean | null = null;
-  private savedInteractionEnabled: boolean | null = null;
+  private navigationLatched = false;
+  private closedThisFrame = false;
+  private readonly unsubscribeSettings: () => void;
   private storyCompletedHandler: (() => void) | null = null;
 
   public constructor(private readonly options: PhoneControllerOptions) {
@@ -40,6 +45,11 @@ export class PhoneController implements PhoneStoryActions {
       onClose: this.close,
     });
     options.ui.hide();
+    this.unsubscribeSettings = options.settings.subscribe((settings) => {
+      if (this.mode === 'normal' && this.screen === 'settings') {
+        options.ui.updateSettings(settings);
+      }
+    });
   }
 
   public get isOpen(): boolean {
@@ -48,6 +58,14 @@ export class PhoneController implements PhoneStoryActions {
 
   public get isStoryPresenting(): boolean {
     return this.mode === 'story';
+  }
+
+  public get isNormalOpen(): boolean { return this.mode === 'normal'; }
+
+  public consumeSimulationGate(): boolean {
+    const gate = this.mode === 'normal' || this.closedThisFrame;
+    this.closedThisFrame = false;
+    return gate;
   }
 
   public update(): void {
@@ -67,8 +85,26 @@ export class PhoneController implements PhoneStoryActions {
       return;
     }
 
-    if (this.mode === 'normal' && this.options.input.consumeActionPress(InputAction.Back)) {
+    if (this.mode !== 'normal') return;
+    if (this.options.input.consumeActionPress(InputAction.Back)) {
       this.back();
+      return;
+    }
+    if (this.options.input.consumeActionPress(InputAction.Interact)) {
+      this.options.ui.activateFocused();
+      return;
+    }
+    const movement = this.options.input.getMovement();
+    if (Math.hypot(movement.x, movement.y) < 0.25) this.navigationLatched = false;
+    if (this.navigationLatched || Math.max(Math.abs(movement.x), Math.abs(movement.y)) < 0.55) return;
+    this.navigationLatched = true;
+    if (Math.abs(movement.x) > Math.abs(movement.y)) {
+      const direction = movement.x < 0 ? -1 : 1;
+      if (!this.options.ui.adjustFocusedSlider(direction)) {
+        this.options.ui.moveFocus(direction < 0 ? 'left' : 'right');
+      }
+    } else {
+      this.options.ui.moveFocus(movement.y < 0 ? 'up' : 'down');
     }
   }
 
@@ -77,12 +113,9 @@ export class PhoneController implements PhoneStoryActions {
       return false;
     }
 
-    this.savedMovementEnabled = this.options.player.isMovementEnabled;
-    this.savedInteractionEnabled = this.options.interaction.isInteractionEnabled;
-    this.options.player.setMovementEnabled(false);
-    this.options.interaction.setEnabled(false);
     this.mode = 'normal';
     this.screen = 'home';
+    this.navigationLatched = true;
     this.renderCurrentScreen();
     this.options.ui.show();
     return true;
@@ -95,14 +128,8 @@ export class PhoneController implements PhoneStoryActions {
 
     this.options.ui.hide();
     this.mode = 'closed';
-    if (this.savedMovementEnabled !== null) {
-      this.options.player.setMovementEnabled(this.savedMovementEnabled);
-    }
-    if (this.savedInteractionEnabled !== null) {
-      this.options.interaction.setEnabled(this.savedInteractionEnabled);
-    }
-    this.savedMovementEnabled = null;
-    this.savedInteractionEnabled = null;
+    this.closedThisFrame = true;
+    this.navigationLatched = false;
     this.options.focusTarget.focus();
   };
 
@@ -115,8 +142,10 @@ export class PhoneController implements PhoneStoryActions {
       return;
     }
 
-    this.screen = 'home';
+    this.screen = this.screen === 'return-confirm' ? 'settings' : 'home';
     this.renderCurrentScreen();
+    this.navigationLatched = true;
+    this.options.ui.focusDefault();
   };
 
   public presentStoryCard(card: PhoneStoryCard, onComplete: () => void): boolean {
@@ -155,6 +184,7 @@ export class PhoneController implements PhoneStoryActions {
   public dispose(): void {
     this.cancelStoryPresentation();
     this.close();
+    this.unsubscribeSettings();
     this.options.ui.dispose();
   }
 
@@ -164,6 +194,8 @@ export class PhoneController implements PhoneStoryActions {
     }
     this.screen = 'messages';
     this.renderCurrentScreen();
+    this.navigationLatched = true;
+    this.options.ui.focusDefault();
   };
 
   private readonly showAlbum = (): void => {
@@ -172,19 +204,68 @@ export class PhoneController implements PhoneStoryActions {
     }
     this.screen = 'album';
     this.renderCurrentScreen();
+    this.navigationLatched = true;
+    this.options.ui.focusDefault();
+  };
+
+  private readonly showMemories = (): void => this.showScreen('memories');
+  private readonly showProfile = (): void => this.showScreen('profile');
+  private readonly showSettings = (): void => this.showScreen('settings');
+  private readonly showReturnConfirmation = (): void => this.showScreen('return-confirm');
+
+  private showScreen(screen: NormalPhoneScreen): void {
+    if (this.mode !== 'normal') return;
+    this.screen = screen;
+    this.navigationLatched = true;
+    this.renderCurrentScreen();
+    this.options.ui.focusDefault();
+  }
+
+  private readonly changeVolume = (key: VolumeSetting, value: number): void => {
+    this.options.settings.setVolume(key, value);
+  };
+
+  private readonly toggleMute = (): void => {
+    this.options.settings.setMuted(!this.options.settings.snapshot.muted);
+  };
+
+  private readonly returnToTitle = (): void => {
+    this.options.returnToTitle();
   };
 
   private renderCurrentScreen(): void {
     const snapshot = this.options.progress.snapshot;
     switch (this.screen) {
       case 'home':
-        this.options.ui.renderHome(snapshot, this.showMessages, this.showAlbum);
+        this.options.ui.renderHome(
+          snapshot, this.showMessages, this.showAlbum,
+          this.showMemories, this.showProfile, this.showSettings,
+        );
         break;
       case 'messages':
         this.options.ui.renderMessages(this.resolveMessageThreads(snapshot.unlockedMessageIds));
         break;
       case 'album':
         this.options.ui.renderAlbum(this.resolvePhotos(snapshot.unlockedPhotoIds));
+        break;
+      case 'memories':
+        this.options.ui.renderMemories(clearedMemories(this.options.route, this.options.worldProgress));
+        break;
+      case 'profile':
+        this.options.ui.renderProfile(profileView(
+          snapshot, this.options.worldProgress.completedNodeIds.length,
+        ));
+        break;
+      case 'settings':
+        this.options.ui.renderSettings(
+          this.options.settings.snapshot,
+          this.changeVolume,
+          this.toggleMute,
+          this.showReturnConfirmation,
+        );
+        break;
+      case 'return-confirm':
+        this.options.ui.renderReturnConfirmation(this.back, this.returnToTitle);
         break;
     }
   }

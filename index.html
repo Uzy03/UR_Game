@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#d8cfc3" />
-    <title>Anniversary Game — Phase 21</title>
+    <title>Anniversary Game — Phase 22</title>
   </head>
   <body>
     <main id="app" aria-label="3D game"></main>
@@ -17,7 +17,7 @@
     >Sound On</button>
     <section id="start-menu" class="start-menu">
       <div class="start-menu-panel" role="dialog" aria-modal="true" aria-labelledby="start-menu-title">
-        <p class="start-menu-phase">Phase 21 Gamepad Input</p>
+        <p class="start-menu-phase">Phase 22 Smartphone Hub</p>
         <h1 id="start-menu-title">Anniversary Game</h1>
         <p class="start-menu-description">Play a campaign that connects every story and gameplay system.</p>
         <div class="start-menu-actions">
@@ -70,7 +70,10 @@
           <button type="button" class="phone-header-button" data-phone-close>Close</button>
         </header>
         <div class="phone-screen" data-phone-screen></div>
-        <footer class="phone-home-indicator" aria-hidden="true"></footer>
+        <footer class="phone-footer">
+          <span class="phone-navigation-hint">Stick / WASD: Move · ○ / E: Select · × / Esc: Back · Options / F: Close</span>
+          <span class="phone-home-indicator" aria-hidden="true"></span>
+        </footer>
       </div>
     </section>
     <div id="stage-controls" class="controls" aria-hidden="true">

@@ -50,6 +50,9 @@ export class AudioManager implements AudioActions {
   private desiredBgm: DesiredBgm | null = null;
   private currentBgm: BgmChannel | null = null;
   private muted = false;
+  private masterVolume = 1;
+  private bgmVolume = 1;
+  private sfxVolume = 1;
   private unlocked = false;
   private unlockListenersArmed = false;
   private disposed = false;
@@ -112,7 +115,7 @@ export class AudioManager implements AudioActions {
 
     const media = this.options.createMedia(clip.src);
     media.loop = clip.loop ?? false;
-    media.volume = clip.volume;
+    media.volume = this.effectiveSfxVolume(clip);
     const endedHandler: EventListener = () => this.releaseSfx(playback);
     const playback: SfxPlayback = { clip, media, endedHandler };
     this.sfxPlaybacks.add(playback);
@@ -130,7 +133,20 @@ export class AudioManager implements AudioActions {
       this.applyBgmVolume(channel);
     }
     for (const playback of this.sfxPlaybacks) {
-      playback.media.volume = muted ? 0 : playback.clip.volume;
+      playback.media.volume = this.effectiveSfxVolume(playback.clip);
+    }
+  }
+
+  public setVolumeLevels(masterVolume: number, bgmVolume: number, sfxVolume: number): void {
+    if ([masterVolume, bgmVolume, sfxVolume].some(
+      (value) => !Number.isFinite(value) || value < 0 || value > 1,
+    )) throw new RangeError('Audio volumes must be finite values from 0 to 1.');
+    this.masterVolume = masterVolume;
+    this.bgmVolume = bgmVolume;
+    this.sfxVolume = sfxVolume;
+    for (const channel of this.bgmChannels) this.applyBgmVolume(channel);
+    for (const playback of this.sfxPlaybacks) {
+      playback.media.volume = this.effectiveSfxVolume(playback.clip);
     }
   }
 
@@ -281,7 +297,13 @@ export class AudioManager implements AudioActions {
   }
 
   private applyBgmVolume(channel: BgmChannel): void {
-    channel.media.volume = this.muted ? 0 : channel.clip.volume * channel.gain;
+    channel.media.volume = this.muted
+      ? 0
+      : channel.clip.volume * channel.gain * this.masterVolume * this.bgmVolume;
+  }
+
+  private effectiveSfxVolume(clip: AudioClipDefinition): number {
+    return this.muted ? 0 : clip.volume * this.masterVolume * this.sfxVolume;
   }
 
   private armUnlockListeners(): void {

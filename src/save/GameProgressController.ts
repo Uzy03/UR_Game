@@ -119,6 +119,14 @@ export class GameProgressController implements CheckpointActions {
     this.showMenu('Progress reset. Choose New Game when you are ready.');
   };
 
+  public readonly returnToTitle = (): void => {
+    if (this.disposed || this.restoring || !this.gameActive) return;
+    this.cleanupAndLockWorld();
+    this.dependencies.sceneManager.unloadScene();
+    this.ensureMenuScene();
+    this.showMenu();
+  };
+
   public dispose(): void {
     if (this.disposed) {
       return;

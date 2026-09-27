@@ -54,6 +54,7 @@ import { CheckpointRegistry } from '../save/CheckpointRegistry';
 import type { CheckpointActions } from '../save/CheckpointTypes';
 import { GameProgressController } from '../save/GameProgressController';
 import { GameSaveStore } from '../save/GameSaveStore';
+import { SettingsController } from '../settings/SettingsController';
 import { SceneContentRegistry } from '../scene/SceneContentRegistry';
 import { SceneManager, type SceneActions } from '../scene/SceneManager';
 import { SceneRuntime } from '../scene/SceneRuntime';
@@ -97,6 +98,7 @@ export class Game {
   private readonly audio: AudioManager;
   private readonly audioMediaFactory: BrowserAudioMediaFactory;
   private readonly audioMuteButton: AudioMuteButton;
+  private readonly settings: SettingsController;
   private readonly sceneManager: SceneManager;
   private readonly phone: PhoneController;
   private readonly progress: GameProgressController;
@@ -202,10 +204,7 @@ export class Game {
     this.audioMuteButton = new AudioMuteButton(
       requireElement<HTMLButtonElement>('audio-mute'),
     );
-    this.audioMuteButton.setMuted(this.audio.isMuted);
-    this.audioMuteButton.setToggleHandler(() => {
-      this.audioMuteButton.setMuted(this.audio.toggleMuted());
-    });
+    this.settings = new SettingsController(this.audio, this.audioMuteButton);
     const checkpointRegistry = new CheckpointRegistry(
       content.checkpoints,
       sceneContent,
@@ -343,15 +342,14 @@ export class Game {
 
     this.phone = new PhoneController({
       input: this.input,
-      player: this.player,
-      interaction: this.interaction,
       progress: phoneProgress,
       content: phoneContent,
+      route: worldRoute,
+      worldProgress,
+      settings: this.settings,
       ui: new PhoneUI(requireElement('phone-overlay')),
-      canOpen: () => (
-        progressTarget?.isGameActive === true
-        && this.eventRunner.state !== 'running'
-      ),
+      canOpen: () => progressTarget?.isGameActive === true,
+      returnToTitle: () => progressTarget?.returnToTitle(),
       focusTarget: this.renderer.domElement,
     });
     phoneTarget = this.phone;
@@ -389,7 +387,6 @@ export class Game {
         stageControlsElement: requireElement('stage-controls'),
         mapControlsElement: requireElement('world-map-controls'),
         onActivate: () => {
-          this.phone.close();
           this.sceneManager.unloadScene();
           this.player.object.visible = false;
           this.player.setMovementEnabled(false);
@@ -522,31 +519,34 @@ export class Game {
     // Controllers submit movement before the physics step; visuals only read the resolved pose afterward.
     this.input.update();
     this.startMenu.update();
-    if (this.worldMap.isActive) {
-      this.worldMap.update(deltaSeconds);
-    } else if (this.sceneManager.currentSceneId !== null) {
-      this.phone.update();
-      this.itemThrow.update(deltaSeconds);
-      for (const npc of this.npcs.values()) {
-        npc.update(deltaSeconds);
+    this.phone.update();
+    const simulationGated = this.phone.consumeSimulationGate();
+    if (!simulationGated && this.progress.isGameActive) {
+      if (this.worldMap.isActive) {
+        this.worldMap.update(deltaSeconds);
+      } else if (this.sceneManager.currentSceneId !== null) {
+        this.itemThrow.update(deltaSeconds);
+        for (const npc of this.npcs.values()) {
+          npc.update(deltaSeconds);
+        }
+        this.player.updateBeforePhysics(deltaSeconds);
+        this.physics.step(deltaSeconds);
+        this.player.setCarrying(this.carry.hasItem);
+        this.player.updateAfterPhysics(deltaSeconds);
+        this.dashBump.updateAfterPlayerResolution();
+        this.interaction.update(deltaSeconds);
       }
-      this.player.updateBeforePhysics(deltaSeconds);
-      this.physics.step(deltaSeconds);
-      this.player.setCarrying(this.carry.hasItem);
-      this.player.updateAfterPhysics(deltaSeconds);
-      this.dashBump.updateAfterPlayerResolution();
-      this.interaction.update(deltaSeconds);
+      this.eventRunner.update(deltaSeconds);
+      this.worldMap.commitPendingTransition();
+      this.sceneManager.updatePresentation(deltaSeconds);
+      if (this.worldMap.isActive) {
+        this.worldMap.updateCamera(deltaSeconds);
+      } else {
+        this.followCamera.update(deltaSeconds);
+      }
+      this.speechBubble.update(this.camera, deltaSeconds);
     }
-    this.eventRunner.update(deltaSeconds);
-    this.worldMap.commitPendingTransition();
-    this.sceneManager.updatePresentation(deltaSeconds);
     this.audio.update(deltaSeconds);
-    if (this.worldMap.isActive) {
-      this.worldMap.updateCamera(deltaSeconds);
-    } else {
-      this.followCamera.update(deltaSeconds);
-    }
-    this.speechBubble.update(this.camera, deltaSeconds);
     this.renderer.render(this.scene, this.camera);
 
     this.animationFrameId = requestAnimationFrame(this.frame);

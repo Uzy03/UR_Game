@@ -6,6 +6,9 @@ import type {
   PhoneStoryCard,
   PhoneThreadDefinition,
 } from '../../phone/PhoneTypes';
+import type { MemoryEntry, ProfileView } from '../../phone/PhoneHubData';
+import type { SettingsDataV1 } from '../../settings/SettingsStore';
+import type { VolumeSetting } from '../../settings/SettingsController';
 
 export interface PhoneMessageThreadView {
   readonly thread: PhoneThreadDefinition;
@@ -56,7 +59,7 @@ export class PhoneUI {
 
   public show(focusTarget?: HTMLElement): void {
     this.element.hidden = false;
-    (focusTarget ?? this.closeButton).focus();
+    (focusTarget ?? this.navigableControls()[0] ?? this.closeButton).focus();
   }
 
   public hide(): void {
@@ -68,6 +71,9 @@ export class PhoneUI {
     snapshot: PhoneProgressSnapshot,
     onMessages: () => void,
     onAlbum: () => void,
+    onMemories: () => void,
+    onProfile: () => void,
+    onSettings: () => void,
   ): void {
     this.prepareScreen('home', 'Phone');
 
@@ -99,6 +105,9 @@ export class PhoneUI {
         `${snapshot.unlockedPhotoIds.length} unlocked`,
         onAlbum,
       ),
+      this.createAppButton('Memories', 'Cleared places', onMemories),
+      this.createAppButton('Profile', 'Your journey', onProfile),
+      this.createAppButton('Settings', 'Sound & system', onSettings),
     );
     this.screenElement.append(dateLabel, dateValue, objectiveCard, appGrid);
   }
@@ -159,6 +168,139 @@ export class PhoneUI {
     this.screenElement.append(grid);
   }
 
+  public renderMemories(entries: readonly MemoryEntry[]): void {
+    this.prepareScreen('memories', 'Memories');
+    if (entries.length === 0) {
+      this.screenElement.append(this.createEmptyState('No cleared places yet', 'Keep exploring.'));
+      return;
+    }
+    for (const entry of entries) {
+      const row = this.createElement('article', 'phone-memory-row');
+      row.append(
+        this.createElement('strong', '', entry.routeLabel),
+        this.createElement('span', '', entry.stageLabel),
+        this.createElement('small', '', entry.state),
+      );
+      this.screenElement.append(row);
+    }
+  }
+
+  public renderProfile(profile: ProfileView): void {
+    this.prepareScreen('profile', 'Profile');
+    const card = this.createElement('article', 'phone-profile-card');
+    card.append(this.createElement('h2', '', profile.name));
+    for (const [label, value] of [
+      ['Story date', profile.storyDate],
+      ['Current objective', profile.objective],
+      ['Cleared routes', String(profile.completedRouteCount)],
+      ['Messages', String(profile.unlockedMessageCount)],
+      ['Photos', String(profile.unlockedPhotoCount)],
+    ]) {
+      const row = this.createElement('div', 'phone-profile-row');
+      row.append(this.createElement('span', '', label), this.createElement('strong', '', value));
+      card.append(row);
+    }
+    this.screenElement.append(card);
+  }
+
+  public renderSettings(
+    settings: SettingsDataV1,
+    onVolume: (key: VolumeSetting, value: number) => void,
+    onMute: () => void,
+    onReturnTitle: () => void,
+  ): void {
+    this.prepareScreen('settings', 'Settings');
+    for (const [key, label] of [
+      ['masterVolume', 'Master Volume'],
+      ['bgmVolume', 'BGM Volume'],
+      ['sfxVolume', 'SFX Volume'],
+    ] as const) {
+      const row = this.createElement('label', 'phone-setting-row');
+      row.append(this.createElement('span', '', label));
+      const value = this.createElement('strong', 'phone-setting-value');
+      const slider = this.createElement('input', 'phone-setting-slider');
+      slider.type = 'range';
+      slider.min = '0';
+      slider.max = '1';
+      slider.step = '0.05';
+      slider.dataset.settingKey = key;
+      slider.addEventListener('input', () => onVolume(key, Number(slider.value)));
+      row.append(value, slider);
+      this.screenElement.append(row);
+    }
+    const mute = this.createElement('button', 'phone-system-button');
+    mute.type = 'button';
+    mute.dataset.settingMute = 'true';
+    mute.addEventListener('click', onMute);
+    const returnButton = this.createElement('button', 'phone-system-button phone-system-danger', 'Return to Title');
+    returnButton.type = 'button';
+    returnButton.addEventListener('click', onReturnTitle);
+    this.screenElement.append(mute, returnButton);
+    this.updateSettings(settings);
+  }
+
+  public updateSettings(settings: SettingsDataV1): void {
+    for (const key of ['masterVolume', 'bgmVolume', 'sfxVolume'] as const) {
+      const slider = this.screenElement.querySelector<HTMLInputElement>(`[data-setting-key="${key}"]`);
+      if (slider === null) continue;
+      slider.value = String(settings[key]);
+      const value = slider.parentElement?.querySelector<HTMLElement>('.phone-setting-value');
+      if (value !== null && value !== undefined) value.textContent = `${Math.round(settings[key] * 100)}%`;
+    }
+    const mute = this.screenElement.querySelector<HTMLButtonElement>('[data-setting-mute]');
+    if (mute !== null) mute.textContent = settings.muted ? 'Sound: Off' : 'Sound: On';
+  }
+
+  public renderReturnConfirmation(onCancel: () => void, onConfirm: () => void): void {
+    this.prepareScreen('return-confirm', 'Return to Title');
+    this.screenElement.append(this.createElement(
+      'p', 'phone-confirm-text', 'Return to the title? Your latest checkpoint remains saved.',
+    ));
+    const cancel = this.createElement('button', 'phone-system-button', 'Cancel');
+    cancel.type = 'button';
+    cancel.addEventListener('click', onCancel);
+    const confirm = this.createElement('button', 'phone-system-button phone-system-danger', 'Return to Title');
+    confirm.type = 'button';
+    confirm.addEventListener('click', onConfirm);
+    this.screenElement.append(cancel, confirm);
+    cancel.focus();
+  }
+
+  public moveFocus(direction: 'up' | 'down' | 'left' | 'right'): void {
+    const controls = this.navigableControls();
+    if (controls.length === 0) {
+      this.screenElement.scrollBy({ top: direction === 'up' ? -70 : 70 });
+      return;
+    }
+    const current = controls.indexOf(document.activeElement as HTMLElement);
+    const columns = this.shellElement.dataset.phoneScreenName === 'home' ? 2 : 1;
+    const step = direction === 'up' ? -columns
+      : direction === 'down' ? columns
+        : direction === 'left' ? -1 : 1;
+    const next = Math.max(0, Math.min(controls.length - 1, (current < 0 ? 0 : current) + step));
+    controls[next]?.focus();
+  }
+
+  public adjustFocusedSlider(direction: -1 | 1): boolean {
+    const focused = document.activeElement;
+    if (!(focused instanceof HTMLInputElement) || focused.type !== 'range'
+      || !this.screenElement.contains(focused)) return false;
+    const value = Math.max(0, Math.min(1, Math.round((Number(focused.value) + direction * 0.05) * 20) / 20));
+    focused.value = String(value);
+    focused.dispatchEvent(new Event('input', { bubbles: true }));
+    return true;
+  }
+
+  public activateFocused(): void {
+    const focused = document.activeElement;
+    if (focused instanceof HTMLButtonElement && this.screenElement.contains(focused)
+      && !focused.disabled) focused.click();
+  }
+
+  public focusDefault(): void {
+    (this.navigableControls()[0] ?? this.closeButton).focus();
+  }
+
   public renderStoryCard(
     card: PhoneStoryCard,
     onAction: () => void,
@@ -207,6 +349,11 @@ export class PhoneUI {
 
   private clearScreen(): void {
     this.screenElement.replaceChildren();
+  }
+
+  private navigableControls(): HTMLElement[] {
+    return [...this.screenElement.querySelectorAll<HTMLButtonElement | HTMLInputElement>('button, input')]
+      .filter((control) => !control.disabled && !control.hidden && control.closest('[hidden]') === null);
   }
 
   private createAppButton(
