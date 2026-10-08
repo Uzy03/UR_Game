@@ -168,8 +168,25 @@ export class PhoneUI {
     this.screenElement.append(grid);
   }
 
-  public renderMemories(entries: readonly MemoryEntry[]): void {
+  public renderMemories(entries: readonly MemoryEntry[], replay?: {
+    readonly onReplay: (nodeId: string) => void;
+    readonly activeLabel: string | null;
+    readonly onExit: () => void;
+    readonly error: string | null;
+  }): void {
     this.prepareScreen('memories', 'Memories');
+    if (replay?.error) {
+      const error = this.createElement('p', 'phone-confirm-text', replay.error);
+      error.setAttribute('role', 'alert');
+      this.screenElement.append(error);
+    }
+    if (replay?.activeLabel) {
+      this.screenElement.append(this.createElement('p', 'phone-section-label', `Replaying ${replay.activeLabel}`));
+      const exit = this.createElement('button', 'phone-system-button', 'Exit Replay');
+      exit.type = 'button';
+      exit.addEventListener('click', replay.onExit);
+      this.screenElement.append(exit);
+    }
     if (entries.length === 0) {
       this.screenElement.append(this.createEmptyState('No cleared places yet', 'Keep exploring.'));
       return;
@@ -181,6 +198,13 @@ export class PhoneUI {
         this.createElement('span', '', entry.stageLabel),
         this.createElement('small', '', entry.state),
       );
+      if (replay !== undefined) {
+        const button = this.createElement('button', 'phone-system-button', `Replay ${entry.routeLabel}`);
+        button.type = 'button';
+        button.disabled = replay.activeLabel !== null;
+        button.addEventListener('click', () => replay.onReplay(entry.id));
+        row.append(button);
+      }
       this.screenElement.append(row);
     }
   }
@@ -260,6 +284,32 @@ export class PhoneUI {
     cancel.type = 'button';
     cancel.addEventListener('click', onCancel);
     const confirm = this.createElement('button', 'phone-system-button phone-system-danger', 'Return to Title');
+    confirm.type = 'button';
+    confirm.addEventListener('click', onConfirm);
+    this.screenElement.append(cancel, confirm);
+    cancel.focus();
+  }
+
+  public renderReplayConfirmation(entry: MemoryEntry, onCancel: () => void, onConfirm: () => void): void {
+    this.prepareScreen('replay-confirm', `Replay ${entry.routeLabel}`);
+    this.renderReplayActions(
+      `${entry.stageLabel}. Replay does not change campaign progress. Starting Replay leaves the current transient stage state. After Replay, you return to your latest saved campaign checkpoint.`,
+      'Start Replay', onCancel, onConfirm,
+    );
+  }
+
+  public renderExitReplayConfirmation(onCancel: () => void, onConfirm: () => void): void {
+    this.prepareScreen('exit-replay-confirm', 'Exit Replay');
+    this.renderReplayActions('Leave Replay and return to your saved campaign checkpoint? Campaign progress stays unchanged.',
+      'Exit Replay', onCancel, onConfirm);
+  }
+
+  private renderReplayActions(text: string, label: string, onCancel: () => void, onConfirm: () => void): void {
+    this.screenElement.append(this.createElement('p', 'phone-confirm-text', text));
+    const cancel = this.createElement('button', 'phone-system-button', 'Cancel');
+    cancel.type = 'button';
+    cancel.addEventListener('click', onCancel);
+    const confirm = this.createElement('button', 'phone-system-button', label);
     confirm.type = 'button';
     confirm.addEventListener('click', onConfirm);
     this.screenElement.append(cancel, confirm);

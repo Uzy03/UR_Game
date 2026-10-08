@@ -60,4 +60,4 @@ export interface PhoneStoryActions {
 }
 
 export type PhoneScreen = 'home' | 'messages' | 'album' | 'memories' | 'profile'
-  | 'settings' | 'return-confirm' | 'story';
+  | 'settings' | 'return-confirm' | 'replay-confirm' | 'exit-replay-confirm' | 'story';
