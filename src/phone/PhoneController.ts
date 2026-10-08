@@ -1,5 +1,6 @@
 import { InputAction } from '../input/InputAction';
 import type { InputManager } from '../input/InputManager';
+import type { ReplayActions } from '../replay/ReplayController';
 import type { SettingsController, VolumeSetting } from '../settings/SettingsController';
 import type { PhoneMessageThreadView, PhoneUI } from '../ui/phone/PhoneUI';
 import type { WorldProgress } from '../world/WorldProgress';
@@ -26,6 +27,7 @@ interface PhoneControllerOptions {
   readonly canOpen: () => boolean;
   readonly returnToTitle: () => void;
   readonly focusTarget: HTMLElement;
+  readonly replay?: ReplayActions;
 }
 
 type NormalPhoneScreen = Exclude<PhoneScreen, 'story'>;
@@ -36,6 +38,8 @@ export class PhoneController implements PhoneStoryActions {
   private mode: PhonePresentationMode = 'closed';
   private navigationLatched = false;
   private closedThisFrame = false;
+  private replayNodeId: string | null = null;
+  private replayError: string | null = null;
   private readonly unsubscribeSettings: () => void;
   private storyCompletedHandler: (() => void) | null = null;
 
@@ -142,7 +146,8 @@ export class PhoneController implements PhoneStoryActions {
       return;
     }
 
-    this.screen = this.screen === 'return-confirm' ? 'settings' : 'home';
+    this.screen = this.screen === 'return-confirm' ? 'settings'
+      : this.screen === 'replay-confirm' || this.screen === 'exit-replay-confirm' ? 'memories' : 'home';
     this.renderCurrentScreen();
     this.navigationLatched = true;
     this.options.ui.focusDefault();
@@ -213,6 +218,25 @@ export class PhoneController implements PhoneStoryActions {
   private readonly showSettings = (): void => this.showScreen('settings');
   private readonly showReturnConfirmation = (): void => this.showScreen('return-confirm');
 
+  private readonly selectReplay = (nodeId: string): void => {
+    if (!clearedMemories(this.options.route, this.options.worldProgress).some((entry) => entry.id === nodeId)
+      || this.options.replay?.activeNode) return;
+    this.replayNodeId = nodeId;
+    this.replayError = null;
+    this.showScreen('replay-confirm');
+  };
+
+  private readonly startReplay = (): void => {
+    if (this.replayNodeId === null || this.options.replay === undefined) return;
+    const error = this.options.replay.start(this.replayNodeId);
+    if (error === null) return;
+    this.replayError = error;
+    if (this.mode === 'closed') this.open();
+    this.showScreen('memories');
+  };
+
+  private readonly exitReplay = (): void => { this.options.replay?.exit(); };
+
   private showScreen(screen: NormalPhoneScreen): void {
     if (this.mode !== 'normal') return;
     this.screen = screen;
@@ -249,7 +273,24 @@ export class PhoneController implements PhoneStoryActions {
         this.options.ui.renderAlbum(this.resolvePhotos(snapshot.unlockedPhotoIds));
         break;
       case 'memories':
-        this.options.ui.renderMemories(clearedMemories(this.options.route, this.options.worldProgress));
+        this.options.ui.renderMemories(clearedMemories(this.options.route, this.options.worldProgress),
+          this.options.replay === undefined ? undefined : {
+            onReplay: this.selectReplay,
+            activeLabel: this.options.replay.activeNode === null ? null
+              : `${this.options.replay.activeNode.label} · ${this.options.replay.activeNode.stageLabel}`,
+            onExit: () => this.showScreen('exit-replay-confirm'),
+            error: this.replayError,
+          });
+        break;
+      case 'replay-confirm': {
+        const entry = clearedMemories(this.options.route, this.options.worldProgress)
+          .find(({ id }) => id === this.replayNodeId);
+        if (entry === undefined) { this.showScreen('memories'); break; }
+        this.options.ui.renderReplayConfirmation(entry, this.back, this.startReplay);
+        break;
+      }
+      case 'exit-replay-confirm':
+        this.options.ui.renderExitReplayConfirmation(this.back, this.exitReplay);
         break;
       case 'profile':
         this.options.ui.renderProfile(profileView(

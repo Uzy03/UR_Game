@@ -54,6 +54,7 @@ import { CheckpointRegistry } from '../save/CheckpointRegistry';
 import type { CheckpointActions } from '../save/CheckpointTypes';
 import { GameProgressController } from '../save/GameProgressController';
 import { GameSaveStore } from '../save/GameSaveStore';
+import { ReplayController } from '../replay/ReplayController';
 import { SettingsController } from '../settings/SettingsController';
 import { SceneContentRegistry } from '../scene/SceneContentRegistry';
 import { SceneManager, type SceneActions } from '../scene/SceneManager';
@@ -103,6 +104,7 @@ export class Game {
   private readonly sceneManager: SceneManager;
   private readonly phone: PhoneController;
   private readonly progress: GameProgressController;
+  private readonly replay: ReplayController;
   private readonly speechBubble: SpeechBubble;
   private readonly followCamera: FollowCamera;
   private readonly worldMap: WorldMapController;
@@ -224,6 +226,8 @@ export class Game {
     const worldProgress = new WorldProgress(worldRoute, new WorldProgressStore());
     let sceneManagerTarget: SceneManager | null = null;
     let progressTarget: GameProgressController | null = null;
+    let replayTarget: ReplayController | null = null;
+    const saveStore = new GameSaveStore();
     let phoneTarget: PhoneController | null = null;
     let worldMapTarget: WorldMapController | null = null;
     let followCameraTarget: FollowCamera | null = null;
@@ -352,6 +356,11 @@ export class Game {
       ui: new PhoneUI(requireElement('phone-overlay')),
       canOpen: () => progressTarget?.isGameActive === true,
       returnToTitle: () => progressTarget?.returnToTitle(),
+      replay: {
+        get activeNode() { return replayTarget?.activeNode ?? null; },
+        start: (nodeId) => replayTarget === null ? 'Replay is unavailable.' : replayTarget.start(nodeId),
+        exit: () => replayTarget?.exit(),
+      },
       focusTarget: this.renderer.domElement,
     });
     phoneTarget = this.phone;
@@ -430,7 +439,7 @@ export class Game {
     this.progress = new GameProgressController({
       initialCheckpointId: content.initialCheckpointId,
       checkpoints: checkpointRegistry,
-      saveStore: new GameSaveStore(),
+      saveStore,
       sceneManager: this.sceneManager,
       eventRunner: this.eventRunner,
       phoneProgress,
@@ -442,8 +451,26 @@ export class Game {
       focusTarget: this.renderer.domElement,
       worldMap: this.worldMap,
       worldProgress,
+      clearReplay: () => replayTarget?.clear(),
     });
     progressTarget = this.progress;
+    this.replay = new ReplayController({
+      route: worldRoute, progress: worldProgress, saveStore, checkpoints: checkpointRegistry,
+      runner: this.eventRunner,
+      isGameActive: () => this.progress.isGameActive,
+      validateSequence: (sequence) => checkpointRegistry.validateRuntimeSequence(sequence),
+      startRuntime: (sequence) => {
+        this.progress.startReplayRuntime(sequence);
+        this.player.object.visible = false;
+      },
+      restoreRuntime: (checkpoint) => {
+        const restored = this.progress.restoreReplayRuntime(checkpoint);
+        this.player.object.visible = true;
+        this.followCamera.snapToTarget();
+        return restored;
+      },
+    });
+    replayTarget = this.replay;
 
     // Story sequences remain idle until the player explicitly chooses New Game or Continue.
     this.progress.boot();
@@ -480,6 +507,7 @@ export class Game {
 
     window.removeEventListener('resize', this.resize);
     this.progress.dispose();
+    this.replay.clear();
     this.eventRunner.dispose();
     this.audioMuteButton.dispose();
     this.audio.dispose();
@@ -540,6 +568,7 @@ export class Game {
         this.interaction.update(deltaSeconds);
       }
       this.eventRunner.update(deltaSeconds);
+      this.replay.update();
       this.worldMap.commitPendingTransition();
       this.sceneManager.updatePresentation(deltaSeconds);
       if (this.worldMap.isActive) {

@@ -40,6 +40,10 @@ export class CheckpointRegistry {
     return this.checkpoints.get(checkpointId);
   }
 
+  public validateRuntimeSequence(sequence: EventSequence): void {
+    this.validateSequence('runtime', sequence);
+  }
+
   private validateDefinition(definition: CheckpointDefinition): void {
     this.assertId(definition.id, 'Checkpoint');
     if (this.scenes.getScene(definition.sceneId) === undefined) {

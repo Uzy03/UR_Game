@@ -1,4 +1,6 @@
 import type { EventRunner } from '../events/EventRunner';
+import type { EventSequence } from '../events/EventTypes';
+import { assertRuntimeOnlyResume } from '../replay/ReplaySequence';
 import type { InteractionSystem } from '../interaction/InteractionSystem';
 import type { NPCController } from '../npc/NPCController';
 import type { PhoneController } from '../phone/PhoneController';
@@ -27,6 +29,7 @@ interface GameProgressDependencies {
   readonly focusTarget: HTMLElement;
   readonly worldMap: WorldMapController;
   readonly worldProgress: WorldProgress;
+  readonly clearReplay?: () => void;
 }
 
 export class GameProgressController implements CheckpointActions {
@@ -60,6 +63,7 @@ export class GameProgressController implements CheckpointActions {
       return;
     }
 
+    this.dependencies.clearReplay?.();
     this.dependencies.saveStore.clear();
     this.dependencies.phoneProgress.reset();
     this.dependencies.worldProgress.reset();
@@ -82,6 +86,7 @@ export class GameProgressController implements CheckpointActions {
       return;
     }
 
+    this.dependencies.clearReplay?.();
     const saveData = this.dependencies.saveStore.load();
     const checkpoint = saveData === null
       ? undefined
@@ -109,6 +114,7 @@ export class GameProgressController implements CheckpointActions {
     }
 
     this.dependencies.menu.setBusy(true);
+    this.dependencies.clearReplay?.();
     this.cleanupAndLockWorld();
     this.dependencies.saveStore.clear();
     this.dependencies.phoneProgress.reset();
@@ -121,6 +127,7 @@ export class GameProgressController implements CheckpointActions {
 
   public readonly returnToTitle = (): void => {
     if (this.disposed || this.restoring || !this.gameActive) return;
+    this.dependencies.clearReplay?.();
     this.cleanupAndLockWorld();
     this.dependencies.sceneManager.unloadScene();
     this.ensureMenuScene();
@@ -135,7 +142,26 @@ export class GameProgressController implements CheckpointActions {
     this.dependencies.menu.dispose();
   }
 
-  private restoreCheckpoint(checkpoint: CheckpointDefinition, saveAfterRestore: boolean): void {
+  public startReplayRuntime(sequence: EventSequence): void {
+    this.cleanupAndLockWorld();
+    this.dependencies.sceneManager.unloadScene();
+    this.gameActive = true;
+    this.setWorldEnabled(true);
+    this.dependencies.menu.hide();
+    if (!this.dependencies.eventRunner.start(sequence)) {
+      throw new Error('Replay sequence could not be started.');
+    }
+    this.dependencies.focusTarget.focus();
+  }
+
+  public restoreReplayRuntime(checkpoint: CheckpointDefinition): boolean {
+    assertRuntimeOnlyResume(checkpoint.resumeSequence);
+    return this.restoreCheckpoint(checkpoint, false, false);
+  }
+
+  private restoreCheckpoint(
+    checkpoint: CheckpointDefinition, saveAfterRestore: boolean, reconstructProgress = true,
+  ): boolean {
     this.restoring = true;
     this.dependencies.menu.setBusy(true);
 
@@ -145,8 +171,10 @@ export class GameProgressController implements CheckpointActions {
 
       // A newly installed scene contains fresh NPCs, so the restore lock must be reapplied.
       this.setWorldEnabled(false);
-      this.dependencies.phoneProgress.replace(checkpoint.phoneProgress);
-      this.dependencies.worldProgress.restoreForCheckpoint(checkpoint.id);
+      if (reconstructProgress) {
+        this.dependencies.phoneProgress.replace(checkpoint.phoneProgress);
+        this.dependencies.worldProgress.restoreForCheckpoint(checkpoint.id);
+      }
 
       this.gameActive = true;
       this.setWorldEnabled(true);
@@ -165,8 +193,10 @@ export class GameProgressController implements CheckpointActions {
       this.continueDisabledForSession = false;
       this.dependencies.menu.hide();
       this.dependencies.focusTarget.focus();
+      return true;
     } catch (error: unknown) {
       this.handleRestoreFailure(error);
+      return false;
     } finally {
       this.restoring = false;
       this.dependencies.menu.setBusy(false);
